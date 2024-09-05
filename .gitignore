@@ -1,0 +1,13 @@
+# Ignore Python files
+__pycache__/
+*.py[cod]
+
+# Ignore Node.js dependencies
+node_modules/
+
+# Ignore environment variables
+.env
+
+# Ignore SQLite DB or logs if any
+*.db
+*.log
