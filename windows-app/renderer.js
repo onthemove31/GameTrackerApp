@@ -77,14 +77,84 @@ ipcRenderer.on('game-status-update', (event, { gameId, status }) => {
 
 loadGames();
 
-/* // Update game status in the UI to show duration
-ipcRenderer.on('game-status-update', (event, { gameId, status, duration }) => {
-    const statusItem = document.getElementById(`status-${gameId}`);
-    if (statusItem) {
-        let statusText = `${statusItem.textContent.split(':')[0]}: ${status}`;
-        if (status === 'Stopped' && duration) {
-            statusText += ` | Duration: ${duration} minutes`;
-        }
-        statusItem.textContent = statusText;
-    }
-}); */
+// Function to load session history
+function loadSessionHistory() {
+    ipcRenderer.invoke('get-session-history').then((sessions) => {
+      const sessionTable = document.getElementById('session-history');
+  
+      // Clear existing rows except the header
+      sessionTable.innerHTML = `
+        <tr>
+          <th>Game Name</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration (minutes)</th>
+        </tr>
+      `;
+  
+      sessions.forEach((session) => {
+        const row = document.createElement('tr');
+  
+        const gameNameCell = document.createElement('td');
+        gameNameCell.textContent = session.game_name;
+  
+        const startTimeCell = document.createElement('td');
+        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+  
+        const endTimeCell = document.createElement('td');
+        endTimeCell.textContent = session.end_time
+          ? new Date(session.end_time).toLocaleString()
+          : 'In Progress';
+  
+        const durationCell = document.createElement('td');
+        durationCell.textContent = session.duration || 'Calculating...';
+  
+        row.appendChild(gameNameCell);
+        row.appendChild(startTimeCell);
+        row.appendChild(endTimeCell);
+        row.appendChild(durationCell);
+  
+        sessionTable.appendChild(row);
+      });
+    });
+  }
+  
+  // Function to load game statistics (total time played per game)
+  function loadGameStats() {
+    ipcRenderer.invoke('get-total-time-per-game').then((totals) => {
+      const statsTable = document.getElementById('game-stats');
+  
+      // Clear existing rows except the header
+      statsTable.innerHTML = `
+        <tr>
+          <th>Game Name</th>
+          <th>Total Time Played (minutes)</th>
+        </tr>
+      `;
+  
+      totals.forEach((game) => {
+        const row = document.createElement('tr');
+  
+        const gameNameCell = document.createElement('td');
+        gameNameCell.textContent = game.game_name;
+  
+        const totalTimeCell = document.createElement('td');
+        totalTimeCell.textContent = game.total_duration || 0;
+  
+        row.appendChild(gameNameCell);
+        row.appendChild(totalTimeCell);
+  
+        statsTable.appendChild(row);
+      });
+    });
+  }
+  
+  // Call these functions when the app loads
+  loadSessionHistory();
+  loadGameStats();
+  
+  // Refresh the data when game status updates
+  ipcRenderer.on('game-status-update', (event, data) => {
+    loadSessionHistory();
+    loadGameStats();
+  });
