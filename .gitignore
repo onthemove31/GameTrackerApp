@@ -11,3 +11,6 @@ node_modules/
 # Ignore SQLite DB or logs if any
 *.db
 *.log
+
+package-lock.json
+windwos-app/dist
