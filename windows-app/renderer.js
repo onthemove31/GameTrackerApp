@@ -314,6 +314,7 @@ function populateGameNameDropdown() {
     const hoursData = data.map(item => ({
         ...item,
         [dataKey]: item[dataKey] / 60
+        
     }));
 
     // Create new chart
@@ -355,7 +356,9 @@ function populateGameNameDropdown() {
                         }
                     }
                 }
-            }
+            },
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
   }
@@ -425,7 +428,9 @@ function populateGameNameDropdown() {
                         }
                     }
                 }
-            }
+            },
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
   }
@@ -496,7 +501,9 @@ function populateGameNameDropdown() {
                 }
             }
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false
       }
     });
   }
