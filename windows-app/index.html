@@ -5,26 +5,83 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Tracker</title>
+    <style>
+      /* Style for the tabs */
+      .tab {
+        display: inline-block;
+        padding: 10px;
+        margin-right: 5px;
+        background-color: lightgray;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+      .tab.active {
+        background-color: gray;
+        color: white;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+    </style>
 </head>
 <body>
-    <h1>Configure Games</h1>
+    <h1>Game Tracker</h1>
 
+    <!-- Tabs -->
     <div>
-        <label for="game-name">Game Name:</label>
-        <input type="text" id="game-name" placeholder="Enter game name">
+        <span class="tab active" id="tracking-tab">Game Tracking</span>
+        <span class="tab" id="history-tab">Session History</span>
+        <span class="tab" id="stats-tab">Statistics</span>
     </div>
-    <div>
-        <label for="exe-path">Executable Path:</label>
-        <input type="text" id="exe-path" placeholder="Choose exe" readonly>
-        <button id="browse-btn">Browse</button>
+
+    <!-- Tab Content: Game Tracking -->
+    <div class="tab-content active" id="tracking-content">
+        <h2>Configure Games</h2>
+
+        <div>
+            <label for="game-name">Game Name:</label>
+            <input type="text" id="game-name" placeholder="Enter game name">
+        </div>
+        <div>
+            <label for="exe-path">Executable Path:</label>
+            <input type="text" id="exe-path" placeholder="Choose exe" readonly>
+            <button id="browse-btn">Browse</button>
+        </div>
+        <button id="add-game-btn">Add Game</button>
+
+        <h2>Tracked Games</h2>
+        <ul id="games-list"></ul>
+
+        <h2>Game Status</h2>
+        <ul id="game-status-list"></ul>
     </div>
-    <button id="add-game-btn">Add Game</button>
 
-    <h2>Tracked Games</h2>
-    <ul id="games-list"></ul>
+    <!-- Tab Content: Session History -->
+    <div class="tab-content" id="history-content">
+        <h2>Session History</h2>
+        <table id="session-history" border="1">
+            <tr>
+                <th>Game Name</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration (minutes)</th>
+            </tr>
+        </table>
+    </div>
 
-    <h2>Game Status</h2>
-    <ul id="game-status-list"></ul>
+    <!-- Tab Content: Statistics -->
+    <div class="tab-content" id="stats-content">
+        <h2>Statistics</h2>
+        <table id="game-stats" border="1">
+            <tr>
+                <th>Game Name</th>
+                <th>Total Time Played (minutes)</th>
+            </tr>
+        </table>
+    </div>
 
     <script src="renderer.js"></script>
 </body>
