@@ -62,14 +62,31 @@
     <!-- Tab Content: Session History -->
     <div class="tab-content" id="history-content">
         <h2>Session History</h2>
+
+        <div id="filters">
+            <label for="filter-game-name">Game Name:</label>
+            <select id="filter-game-name">
+              <option value="">All Games</option> <!-- Default option for all games -->
+            </select>
+        
+            <label for="filter-start-date">Start Date:</label>
+            <input type="date" id="filter-start-date">
+        
+            <label for="filter-end-date">End Date:</label>
+            <input type="date" id="filter-end-date">
+        
+            <button id="apply-filters-btn">Apply Filters</button>
+            <button id="refresh-btn">Refresh</button>
+
+
         <table id="session-history" border="1">
             <tr>
-                <th>Game Name</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Duration (minutes)</th>
+              <th>Game Name</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Duration (minutes)</th>
             </tr>
-        </table>
+          </table>
     </div>
 
     <!-- Tab Content: Statistics -->

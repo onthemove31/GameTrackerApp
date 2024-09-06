@@ -213,8 +213,27 @@ ipcRenderer.on('game-status-update', (event, data) => {
     loadSessionHistory();  // Reload session history when a game session ends
   });
   
-  function loadSessionHistory() {
-    ipcRenderer.invoke('get-session-history').then((sessions) => {
+ // Function to populate the game name dropdown with unique game names
+function populateGameNameDropdown() {
+    ipcRenderer.invoke('get-unique-game-names').then((gameNames) => {
+      const gameNameDropdown = document.getElementById('filter-game-name');
+  
+      // Clear existing options
+      gameNameDropdown.innerHTML = '<option value="">All Games</option>';
+  
+      // Add the unique game names as options
+      gameNames.forEach((game) => {
+        const option = document.createElement('option');
+        option.value = game.game_name;
+        option.textContent = game.game_name;
+        gameNameDropdown.appendChild(option);
+      });
+    });
+  }
+  
+  // Function to load session history from the database, with optional filters
+  function loadSessionHistory(gameName = '', startDate = '', endDate = '') {
+    ipcRenderer.invoke('get-session-history', { gameName, startDate, endDate }).then((sessions) => {
       const sessionTable = document.getElementById('session-history');
   
       // Clear existing session history
@@ -241,9 +260,8 @@ ipcRenderer.on('game-status-update', (event, data) => {
           ? new Date(session.end_time).toLocaleString()
           : 'In Progress';
   
-        // Check if the duration is available; if so, display it, otherwise show 'Calculating...'
         const durationCell = document.createElement('td');
-        durationCell.textContent = session.duration != null ? session.duration : 'Calculating...';
+        durationCell.textContent = session.duration || 'Calculating...';
   
         row.appendChild(gameNameCell);
         row.appendChild(startTimeCell);
@@ -254,3 +272,26 @@ ipcRenderer.on('game-status-update', (event, data) => {
       });
     });
   }
+  
+  // Event listener for the Refresh button
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    // Call loadSessionHistory with no filters to refresh the full table
+    loadSessionHistory();
+  });
+  
+  // Event listener for the Apply Filters button
+  document.getElementById('apply-filters-btn').addEventListener('click', () => {
+    const gameName = document.getElementById('filter-game-name').value;
+    const startDate = document.getElementById('filter-start-date').value;
+    const endDate = document.getElementById('filter-end-date').value;
+  
+    // Call loadSessionHistory with the filters applied
+    loadSessionHistory(gameName, startDate, endDate);
+  });
+  
+  // Populate the game name dropdown on app start
+  populateGameNameDropdown();
+  
+  // Load session history on app start
+  loadSessionHistory();
+  

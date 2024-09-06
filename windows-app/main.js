@@ -174,11 +174,42 @@ ipcMain.handle('get-games', async () => {
 });
 
 // Function to retrieve session history
-ipcMain.handle('get-session-history', async () => {
+ipcMain.handle('get-session-history', async (event, { gameName, startDate, endDate }) => {
   return new Promise((resolve, reject) => {
-    db.all("SELECT game_name, start_time, end_time, duration FROM sessions ORDER BY start_time DESC", (err, rows) => {
+    // Prepare the base query
+    let query = `
+      SELECT game_name, start_time, end_time, duration
+      FROM sessions
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    // Apply game name filter if provided
+    if (gameName) {
+      query += ` AND game_name LIKE ?`;
+      params.push(`%${gameName}%`);
+    }
+
+    // Apply start date filter if provided
+    if (startDate) {
+      query += ` AND date(start_time) >= ?`;
+      params.push(startDate);
+    }
+
+    // Apply end date filter if provided
+    if (endDate) {
+      query += ` AND date(start_time) <= ?`;
+      params.push(endDate);
+    }
+
+    // Order by start time in descending order
+    query += ` ORDER BY start_time DESC`;
+
+    // Execute the query
+    db.all(query, params, (err, rows) => {
       if (err) {
-        console.error("Error fetching sessions from the database:", err);
+        console.error("Error fetching session history:", err);
         reject(err);
       } else {
         resolve(rows);
@@ -269,3 +300,21 @@ async function onGameStop(game) {
     lastSessionDuration: await getLastSessionDuration(game.id)
   });
 }
+
+ipcMain.handle('get-unique-game-names', async () => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT DISTINCT game_name FROM sessions
+      ORDER BY game_name
+    `;
+    
+    db.all(query, (err, rows) => {
+      if (err) {
+        console.error('Error fetching unique game names:', err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+});
