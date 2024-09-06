@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Tracker</title>
+</head>
+<body>
+    <h1>Configure Games</h1>
+
+    <div>
+        <label for="game-name">Game Name:</label>
+        <input type="text" id="game-name" placeholder="Enter game name">
+    </div>
+    <div>
+        <label for="exe-path">Executable Path:</label>
+        <input type="text" id="exe-path" placeholder="Choose exe" readonly>
+        <button id="browse-btn">Browse</button>
+    </div>
+    <button id="add-game-btn">Add Game</button>
+
+    <h2>Tracked Games</h2>
+    <ul id="games-list"></ul>
+
+    <h2>Game Status</h2>
+    <ul id="game-status-list"></ul>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
