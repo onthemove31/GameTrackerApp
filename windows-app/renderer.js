@@ -182,6 +182,75 @@ loadGameStats();
 
 // Refresh the data when game status updates
 ipcRenderer.on('game-status-update', (event, data) => {
-  loadSessionHistory();
-  loadGameStats();
-});
+    const gameStatusList = document.getElementById('game-status-list');
+  
+    // Create or update the game status item
+    let listItem = document.getElementById(`game-status-${data.gameId}`);
+    if (!listItem) {
+      listItem = document.createElement('li');
+      listItem.id = `game-status-${data.gameId}`;
+      gameStatusList.appendChild(listItem);
+    }
+  
+    // Display the game name, status, last session duration, and live time (if running)
+    listItem.innerHTML = `
+      <strong>Game:</strong> ${data.gameName || 'N/A'} <br>
+      <strong>Status:</strong> ${data.status || 'N/A'} <br>
+      <strong>Last Session Duration:</strong> ${data.lastSessionDuration ? `${data.lastSessionDuration} minutes` : 'N/A'} <br>
+      <strong>Live Session Time:</strong> <span id="live-time-${data.gameId}">N/A</span>
+    `;
+  });
+  
+  // Update live session time in real-time
+  ipcRenderer.on('update-live-time', (event, { gameId, time }) => {
+    const liveTimeElement = document.getElementById(`live-time-${gameId}`);
+    if (liveTimeElement) {
+      liveTimeElement.textContent = time;
+    }
+  });
+
+  ipcRenderer.on('refresh-session-history', () => {
+    loadSessionHistory();  // Reload session history when a game session ends
+  });
+  
+  function loadSessionHistory() {
+    ipcRenderer.invoke('get-session-history').then((sessions) => {
+      const sessionTable = document.getElementById('session-history');
+  
+      // Clear existing session history
+      sessionTable.innerHTML = `
+        <tr>
+          <th>Game Name</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration (minutes)</th>
+        </tr>
+      `;
+  
+      sessions.forEach((session) => {
+        const row = document.createElement('tr');
+  
+        const gameNameCell = document.createElement('td');
+        gameNameCell.textContent = session.game_name;
+  
+        const startTimeCell = document.createElement('td');
+        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+  
+        const endTimeCell = document.createElement('td');
+        endTimeCell.textContent = session.end_time
+          ? new Date(session.end_time).toLocaleString()
+          : 'In Progress';
+  
+        // Check if the duration is available; if so, display it, otherwise show 'Calculating...'
+        const durationCell = document.createElement('td');
+        durationCell.textContent = session.duration != null ? session.duration : 'Calculating...';
+  
+        row.appendChild(gameNameCell);
+        row.appendChild(startTimeCell);
+        row.appendChild(endTimeCell);
+        row.appendChild(durationCell);
+  
+        sessionTable.appendChild(row);
+      });
+    });
+  }

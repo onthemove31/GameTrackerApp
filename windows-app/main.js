@@ -104,19 +104,15 @@ async function checkForRunningGames() {
   const processes = await psList.default(); // Access the default export
 
   getGames((games) => {
-    games.forEach((game) => {
+    games.forEach(async (game) => {
       const isGameRunning = processes.some((p) => p.name.toLowerCase() === path.basename(game.exe_path).toLowerCase());
 
       if (isGameRunning && !gameStatus[game.id]) {
-        // Game is running
         gameStatus[game.id] = true;
-        logGameStart(game.id); // Log game start in sessions
-        mainWindow.webContents.send('game-status-update', { gameId: game.id, status: 'Running' });
+        await onGameStart(game);
       } else if (!isGameRunning && gameStatus[game.id]) {
-        // Game is not running
         gameStatus[game.id] = false;
-        logGameEnd(game.id); // Log game end in sessions
-        mainWindow.webContents.send('game-status-update', { gameId: game.id, status: 'Stopped' });
+        await onGameStop(game);
       }
     });
   });
@@ -180,7 +176,7 @@ ipcMain.handle('get-games', async () => {
 // Function to retrieve session history
 ipcMain.handle('get-session-history', async () => {
   return new Promise((resolve, reject) => {
-    db.all("SELECT * FROM sessions ORDER BY start_time DESC", (err, rows) => {
+    db.all("SELECT game_name, start_time, end_time, duration FROM sessions ORDER BY start_time DESC", (err, rows) => {
       if (err) {
         console.error("Error fetching sessions from the database:", err);
         reject(err);
@@ -210,3 +206,66 @@ ipcMain.handle('get-total-time-per-game', async () => {
     });
   });
 });
+
+function getLastSessionDuration(gameId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT duration FROM sessions
+      WHERE game_id = ?
+      ORDER BY end_time DESC
+      LIMIT 1
+    `;
+    db.get(query, [gameId], (err, row) => {
+      if (err) {
+        console.error("Error fetching last session duration:", err);
+        reject(err);
+      } else {
+        resolve(row ? row.duration : 0);  // Return 0 if there's no previous session
+      }
+    });
+  });
+}
+
+let liveSessionTimers = {};
+
+function startLiveSessionTimer(gameId, startTime) {
+  liveSessionTimers[gameId] = setInterval(() => {
+    const now = new Date();
+    const elapsedTime = Math.floor((now - startTime) / 1000);  // Elapsed time in seconds
+    const minutes = Math.floor(elapsedTime / 60);
+    const seconds = elapsedTime % 60;
+    mainWindow.webContents.send('update-live-time', {
+      gameId,
+      time: `${minutes}m ${seconds}s`
+    });
+  }, 1000);  // Update every second
+}
+
+function stopLiveSessionTimer(gameId) {
+  clearInterval(liveSessionTimers[gameId]);
+}
+
+async function onGameStart(game) {
+  console.log('Game Started:', game);  // Add this to check the game object
+  const now = new Date();
+  startLiveSessionTimer(game.id, now);
+  
+  mainWindow.webContents.send('game-status-update', {
+    gameId: game.id,
+    gameName: game.name,
+    status: 'Running',
+    lastSessionDuration: await getLastSessionDuration(game.id)
+  });
+}
+
+async function onGameStop(game) {
+  console.log('Game Stopped:', game);  // Add this to check the game object
+  stopLiveSessionTimer(game.id);
+  
+  mainWindow.webContents.send('game-status-update', {
+    gameId: game.id,
+    gameName: game.name,
+    status: 'Stopped',
+    lastSessionDuration: await getLastSessionDuration(game.id)
+  });
+}
