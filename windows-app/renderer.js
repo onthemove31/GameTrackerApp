@@ -31,12 +31,17 @@ function initializeFilters() {
 }
 
 // Open file dialog to browse for the game executable
-browseBtn.addEventListener('click', () => {
-    ipcRenderer.invoke('open-file-dialog').then(result => {
-        if (!result.canceled) {
-            exePathInput.value = result.filePaths[0];
-        }
-    });
+browseBtn.addEventListener('click', async () => {
+  try {
+    const result = await ipcRenderer.invoke('open-file-dialog');
+    if (!result.canceled) {
+      exePathInput.value = result.filePath;
+      gameNameInput.value = result.gameName;
+    }
+  } catch (error) {
+    console.error('Error selecting file:', error);
+    alert('An error occurred while selecting the file. Please try again.');
+  }
 });
 
 // Add game to the list

@@ -3,6 +3,7 @@ const log = require('electron-log');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { execFile } = require('child_process');
+const getVersionInfo = require('win-version-info');
 
 // Set the log file path directly
 log.transports.file.file = path.join(app.getPath('userData'), 'logs/main.log');
@@ -158,13 +159,32 @@ process.on('uncaughtException', (error) => {
 });
 
 // Handle file dialog for browsing executables
-ipcMain.handle('open-file-dialog', async () => {
+ipcMain.handle('open-file-dialog', async (event) => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Executables', extensions: ['exe'] }]
+    filters: [
+      { name: 'Executables', extensions: ['exe'] }
+    ]
   });
-  return result;
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const filePath = result.filePaths[0];
+    const gameName = await getGameName(filePath);
+    return { filePath, gameName };
+  }
+  return { canceled: true };
 });
+
+async function getGameName(filePath) {
+  try {
+    const versionInfo = getVersionInfo(filePath);
+    const gameName = versionInfo.ProductName || versionInfo.FileDescription || '';
+    return gameName.trim() || path.basename(filePath, '.exe');
+  } catch (error) {
+    console.error('Error getting game name:', error);
+    return path.basename(filePath, '.exe');
+  }
+}
 
 // Function to add a game to the database
 ipcMain.on('add-game', (event, game) => {
