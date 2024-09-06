@@ -1,7 +1,14 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const log = require('electron-log');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { execFile } = require('child_process');
+
+// Set the log file path directly
+log.transports.file.file = path.join(app.getPath('userData'), 'logs/main.log');
+
+// Set log level (can be 'error', 'warn', 'info', 'verbose', 'debug', or 'silly')
+log.transports.file.level = 'info';  // Log info, warnings, and errors
 
 // Initialize the SQLite database
 const db = new sqlite3.Database('games.db');
@@ -136,12 +143,18 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+  log.info('Main window loaded.');
 }
 
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+  log.info('Main window closed.');
+});
+
+process.on('uncaughtException', (error) => {
+  log.error('Uncaught Exception:', error.message, error.stack);
 });
 
 // Handle file dialog for browsing executables
@@ -319,6 +332,233 @@ ipcMain.handle('get-unique-game-names', async () => {
         console.error('Error fetching unique game names:', err);
         reject(err);
       } else {
+        resolve(rows);
+      }
+    });
+  });
+});
+
+//Queries for Statistics
+
+function addFiltersToQuery(query, filters = {}) {
+  const conditions = [];
+  const params = [];
+
+  console.log('Adding filters:', JSON.stringify(filters, null, 2));
+
+  if (filters.gameName && filters.gameName !== '') {
+    conditions.push('game_name = ?');
+    params.push(filters.gameName);
+  }
+  if (filters.startDate && filters.startDate !== '') {
+    conditions.push('date(start_time) >= date(?)');
+    params.push(filters.startDate);
+  }
+  if (filters.endDate && filters.endDate !== '') {
+    conditions.push('date(start_time) <= date(?)');
+    params.push(filters.endDate);
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  console.log('Final query before GROUP BY:', query);
+  console.log('Final parameters:', params);
+
+  return { query, params };
+}
+
+ipcMain.handle('get-total-playtime-per-game', async (event, filters) => {
+  console.log('Received filters for total playtime:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT game_name, SUM(duration) as total_playtime
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY game_name ORDER BY total_playtime DESC';
+
+    console.log('Total playtime query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching total playtime per game:', err);
+        reject(err);
+      } else {
+        console.log('Total playtime results:', rows);
+        resolve(rows);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-average-session-duration-per-game', async (event, filters) => {
+  console.log('Received filters for average session duration:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT game_name, AVG(duration) as avg_session_duration
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY game_name ORDER BY avg_session_duration DESC';
+
+    console.log('Average session duration query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching average session duration per game:', err);
+        reject(err);
+      } else {
+        console.log('Average session duration results:', rows);
+        resolve(rows);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-longest-play-session-per-game', async (event, filters) => {
+  console.log('Received filters for longest play session:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT game_name, MAX(duration) as longest_session
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY game_name ORDER BY longest_session DESC';
+
+    console.log('Longest play session query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching longest session per game:', err);
+        reject(err);
+      } else {
+        console.log('Longest play session results:', rows);
+        resolve(rows);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-playtime-over-time', async (event, filters) => {
+  console.log('Received filters for playtime over time:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT date(start_time) as play_date, SUM(duration) as total_playtime
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY play_date ORDER BY play_date';
+
+    console.log('Playtime over time query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching playtime over time:', err);
+        reject(err);
+      } else {
+        console.log('Playtime over time results:', rows);
+        resolve(rows);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-sessions-per-game', async (event, filters) => {
+  console.log('Received filters for sessions per game:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT game_name, COUNT(*) as session_count
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY game_name ORDER BY session_count DESC';
+
+    console.log('Sessions per game query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching sessions per game:', err);
+        reject(err);
+      } else {
+        console.log('Sessions per game results:', rows);
+        resolve(rows);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-time-played-per-day', async (event, filters) => {
+  console.log('Received filters for time played per day:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT strftime('%w', start_time) as day_of_week, 
+             SUM(duration) as total_playtime
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY day_of_week ORDER BY day_of_week';
+
+    console.log('Time played per day query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching time played per day:', err);
+        reject(err);
+      } else {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const result = rows.map(row => ({
+          day_of_week: daysOfWeek[row.day_of_week],
+          total_playtime: row.total_playtime
+        }));
+        console.log('Time played per day results:', result);
+        resolve(result);
+      }
+    });
+  });
+});
+
+ipcMain.handle('get-playtime-by-time-of-day', async (event, filters) => {
+  console.log('Received filters for playtime by time of day:', JSON.stringify(filters, null, 2));
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT 
+        game_name,
+        CASE 
+          WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 0 AND 5 THEN 'Night (12AM-6AM)'
+          WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning (6AM-12PM)'
+          WHEN CAST(strftime('%H', start_time) AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon (12PM-6PM)'
+          ELSE 'Evening (6PM-12AM)'
+        END as time_of_day,
+        SUM(duration) as total_playtime
+      FROM sessions
+    `;
+
+    const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
+    query = filteredQuery + ' GROUP BY game_name, time_of_day ORDER BY game_name, time_of_day';
+
+    console.log('Playtime by time of day query:', query);
+    console.log('Query parameters:', params);
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching playtime by time of day:', err);
+        reject(err);
+      } else {
+        console.log('Playtime by time of day results:', rows);
         resolve(rows);
       }
     });

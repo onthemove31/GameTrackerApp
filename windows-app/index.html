@@ -26,8 +26,15 @@
         .tab-content.active {
           display: block;
         }
+        
+        canvas {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
       </style>
-    </head>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
     <h1>Game Tracker</h1>
@@ -73,6 +80,36 @@
 
     <div id="stats-content" class="tab-content">
         <h2>Statistics</h2>
+        <div class="filters">
+          <select id="stats-filter-game-name">
+              <option value="">All Games</option>
+          </select>
+          <input type="date" id="stats-filter-start-date">
+          <input type="date" id="stats-filter-end-date">
+          <button id="stats-apply-filters-btn">Apply Filters</button>
+        </div>
+        <div>
+            <h3>Total Playtime Per Game</h3>
+            <canvas id="total-playtime-chart"></canvas>
+
+            <h3>Average Session Duration Per Game</h3>
+            <canvas id="avg-session-duration-chart"></canvas>
+        
+            <h3>Longest Play Session Per Game</h3>
+            <canvas id="longest-session-chart"></canvas>
+        
+            <h3>Playtime Over Time (Daily)</h3>
+            <canvas id="playtime-over-time-chart"></canvas>
+        
+            <h3>Number of Sessions Per Game</h3>
+            <canvas id="session-count-chart"></canvas>
+        
+            <h3>Time Played Per Day</h3>
+            <canvas id="time-played-per-day-chart"></canvas>
+        
+            <h3>Playtime Distribution By Time of Day</h3>
+            <canvas id="playtime-by-time-of-day-chart"></canvas>
+          </div>
         <table id="game-stats" border="1">
             <tr>
                 <th>Game Name</th>
