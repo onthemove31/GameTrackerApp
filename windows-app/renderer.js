@@ -229,6 +229,10 @@ function populateGameNameDropdown() {
         option.textContent = game.game_name;
         gameNameDropdown.appendChild(option);
       });
+      gameNameDropdown.addEventListener('change', () => {
+        const selectedGameName = gameNameDropdown.value;
+        loadSessionHistory(selectedGameName);  // Pass the selected game name to loadSessionHistory
+      });
     });
   }
   
