@@ -1,15 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const log = require('electron-log');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { execFile } = require('child_process');
-const getVersionInfo = require('win-version-info');
-
-// Set the log file path directly
-log.transports.file.file = path.join(app.getPath('userData'), 'logs/main.log');
-
-// Set log level (can be 'error', 'warn', 'info', 'verbose', 'debug', or 'silly')
-log.transports.file.level = 'info';  // Log info, warnings, and errors
 
 // Initialize the SQLite database
 const db = new sqlite3.Database('games.db');
@@ -134,8 +126,8 @@ let gameStatus = {};
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1600,
+    height: 900,
     webPreferences: {
       preload: path.join(__dirname, 'renderer.js'),
       nodeIntegration: true,
@@ -144,47 +136,22 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  log.info('Main window loaded.');
 }
 
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
-  log.info('Main window closed.');
-});
-
-process.on('uncaughtException', (error) => {
-  log.error('Uncaught Exception:', error.message, error.stack);
 });
 
 // Handle file dialog for browsing executables
-ipcMain.handle('open-file-dialog', async (event) => {
+ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [
-      { name: 'Executables', extensions: ['exe'] }
-    ]
+    filters: [{ name: 'Executables', extensions: ['exe'] }]
   });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    const filePath = result.filePaths[0];
-    const gameName = await getGameName(filePath);
-    return { filePath, gameName };
-  }
-  return { canceled: true };
+  return result;
 });
-
-async function getGameName(filePath) {
-  try {
-    const versionInfo = getVersionInfo(filePath);
-    const gameName = versionInfo.ProductName || versionInfo.FileDescription || '';
-    return gameName.trim() || path.basename(filePath, '.exe');
-  } catch (error) {
-    console.error('Error getting game name:', error);
-    return path.basename(filePath, '.exe');
-  }
-}
 
 // Function to add a game to the database
 ipcMain.on('add-game', (event, game) => {

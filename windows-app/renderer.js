@@ -31,17 +31,12 @@ function initializeFilters() {
 }
 
 // Open file dialog to browse for the game executable
-browseBtn.addEventListener('click', async () => {
-  try {
-    const result = await ipcRenderer.invoke('open-file-dialog');
-    if (!result.canceled) {
-      exePathInput.value = result.filePath;
-      gameNameInput.value = result.gameName;
-    }
-  } catch (error) {
-    console.error('Error selecting file:', error);
-    alert('An error occurred while selecting the file. Please try again.');
-  }
+browseBtn.addEventListener('click', () => {
+    ipcRenderer.invoke('open-file-dialog').then(result => {
+        if (!result.canceled) {
+            exePathInput.value = result.filePaths[0];
+        }
+    });
 });
 
 // Add game to the list
@@ -140,19 +135,19 @@ async function loadStatistics() {
         console.log('Sending filters for total playtime:', JSON.stringify(currentStatsFilters, null, 2));
         let totalPlaytimeData = await ipcRenderer.invoke('get-total-playtime-per-game', currentStatsFilters);
         console.log('Received total playtime data:', totalPlaytimeData);
-        createChart('total-playtime-chart', 'Total Playtime (minutes)', totalPlaytimeData, 'bar', 'total_playtime');
+        createChart('total-playtime-chart', 'Total Playtime (hours)', totalPlaytimeData, 'bar', 'total_playtime');
 
         // Average Session Duration Per Game
         console.log('Sending filters for average session duration:', JSON.stringify(currentStatsFilters, null, 2));
         let avgSessionData = await ipcRenderer.invoke('get-average-session-duration-per-game', currentStatsFilters);
         console.log('Received average session duration data:', avgSessionData);
-        createChart('avg-session-duration-chart', 'Average Session Duration (minutes)', avgSessionData, 'bar', 'avg_session_duration');
+        createChart('avg-session-duration-chart', 'Average Session Duration (hours)', avgSessionData, 'bar', 'avg_session_duration');
 
         // Longest Play Session Per Game
         console.log('Sending filters for longest play session:', JSON.stringify(currentStatsFilters, null, 2));
         let longestSessionData = await ipcRenderer.invoke('get-longest-play-session-per-game', currentStatsFilters);
         console.log('Received longest play session data:', longestSessionData);
-        createChart('longest-session-chart', 'Longest Play Session (minutes)', longestSessionData, 'bar', 'longest_session');
+        createChart('longest-session-chart', 'Longest Play Session (hours)', longestSessionData, 'bar', 'longest_session');
 
         // Playtime Over Time (Daily)
         console.log('Sending filters for playtime over time:', JSON.stringify(currentStatsFilters, null, 2));
@@ -170,7 +165,7 @@ async function loadStatistics() {
         console.log('Sending filters for time played per day:', JSON.stringify(currentStatsFilters, null, 2));
         let timePlayedPerDayData = await ipcRenderer.invoke('get-time-played-per-day', currentStatsFilters);
         console.log('Received time played per day data:', timePlayedPerDayData);
-        createChart('time-played-per-day-chart', 'Total Playtime (minutes)', timePlayedPerDayData, 'bar', 'total_playtime', 'day_of_week');
+        createChart('time-played-per-day-chart', 'Total Playtime (hours)', timePlayedPerDayData, 'bar', 'total_playtime', 'day_of_week');
 
         // Playtime Distribution By Time of Day
         console.log('Sending filters for playtime by time of day:', JSON.stringify(currentStatsFilters, null, 2));
@@ -244,7 +239,7 @@ function populateGameNameDropdown() {
           <th>Game Name</th>
           <th>Start Time</th>
           <th>End Time</th>
-          <th>Duration (minutes)</th>
+          <th>Duration (hours)</th>
         </tr>
       `;
   
@@ -263,9 +258,12 @@ function populateGameNameDropdown() {
           : 'In Progress';
   
         const durationCell = document.createElement('td');
-        durationCell.textContent = session.duration !== null && !isNaN(session.duration) 
-        ? session.duration 
-        : (session.end_time ? 'Calculating...' : 'In Progress');
+        if (session.duration !== null && !isNaN(session.duration)) {
+          const durationHours = (session.duration / 60).toFixed(2);
+          durationCell.textContent = `${durationHours} hours`;
+        } else {
+          durationCell.textContent = session.end_time ? 'Calculating...' : 'In Progress';
+        }
   
         row.appendChild(gameNameCell);
         row.appendChild(startTimeCell);
@@ -312,15 +310,21 @@ function populateGameNameDropdown() {
         window.myCharts[chartId].destroy();
     }
 
+    // Convert minutes to hours
+    const hoursData = data.map(item => ({
+        ...item,
+        [dataKey]: item[dataKey] / 60
+    }));
+
     // Create new chart
     window.myCharts = window.myCharts || {};
     window.myCharts[chartId] = new Chart(ctx, {
         type: type,
         data: {
-            labels: data.map(item => item[labelKey]),
+            labels: hoursData.map(item => item[labelKey]),
             datasets: [{
                 label: label,
-                data: data.map(item => item[dataKey]),
+                data: hoursData.map(item => item[dataKey]),
                 backgroundColor: 'rgba(75, 192, 192, 0.6)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1
@@ -329,7 +333,27 @@ function populateGameNameDropdown() {
         options: {
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' hours';
+                            }
+                            return label;
+                        }
+                    }
                 }
             }
         }
@@ -344,14 +368,20 @@ function populateGameNameDropdown() {
         window.myCharts[chartId].destroy();
     }
 
+    // Convert minutes to hours
+    const hoursData = data.map(item => ({
+        ...item,
+        total_playtime: item.total_playtime / 60
+    }));
+
     window.myCharts = window.myCharts || {};
     window.myCharts[chartId] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(item => item.play_date),
+            labels: hoursData.map(item => item.play_date),
             datasets: [{
                 label: label,
-                data: data.map(item => item.total_playtime),
+                data: hoursData.map(item => item.total_playtime),
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
@@ -376,7 +406,23 @@ function populateGameNameDropdown() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Playtime (minutes)'
+                        text: 'Playtime (hours)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' hours';
+                            }
+                            return label;
+                        }
                     }
                 }
             }
@@ -392,7 +438,7 @@ function populateGameNameDropdown() {
         window.myCharts[chartId].destroy();
     }
     
-    // Process data
+    // Process data and convert minutes to hours
     const games = [...new Set(data.map(item => item.game_name))];
     const timeOfDayCategories = ['Night (12AM-6AM)', 'Morning (6AM-12PM)', 'Afternoon (12PM-6PM)', 'Evening (6PM-12AM)'];
     
@@ -401,7 +447,7 @@ function populateGameNameDropdown() {
         label: game,
         data: timeOfDayCategories.map(category => {
           const item = data.find(d => d.game_name === game && d.time_of_day === category);
-          return item ? item.total_playtime : 0;
+          return item ? item.total_playtime / 60 : 0;
         }),
         backgroundColor: getRandomColor(),
       };
@@ -421,7 +467,7 @@ function populateGameNameDropdown() {
             stacked: true,
             title: {
               display: true,
-              text: 'Total Playtime (minutes)'
+              text: 'Total Playtime (hours)'
             }
           },
           y: {
@@ -435,6 +481,20 @@ function populateGameNameDropdown() {
           },
           legend: {
             position: 'right'
+          },
+          tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.x !== null) {
+                        label += context.parsed.x.toFixed(2) + ' hours';
+                    }
+                    return label;
+                }
+            }
           }
         }
       }
