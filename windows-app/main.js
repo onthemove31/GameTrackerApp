@@ -176,3 +176,37 @@ ipcMain.handle('get-games', async () => {
     });
   });
 });
+
+// Function to retrieve session history
+ipcMain.handle('get-session-history', async () => {
+  return new Promise((resolve, reject) => {
+    db.all("SELECT * FROM sessions ORDER BY start_time DESC", (err, rows) => {
+      if (err) {
+        console.error("Error fetching sessions from the database:", err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+});
+
+// Function to retrieve total time played per game
+ipcMain.handle('get-total-time-per-game', async () => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT game_name, SUM(duration) as total_duration
+      FROM sessions
+      WHERE duration IS NOT NULL
+      GROUP BY game_name
+    `;
+    db.all(query, (err, rows) => {
+      if (err) {
+        console.error("Error calculating total time per game:", err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+});
