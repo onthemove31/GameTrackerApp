@@ -212,6 +212,10 @@ ipcMain.handle('get-session-history', async (event, { gameName, startDate, endDa
         console.error("Error fetching session history:", err);
         reject(err);
       } else {
+        const processedRows = rows.map(row => ({
+          ...row,
+          duration: row.duration !== null ? Number(row.duration) : null
+        }));
         resolve(rows);
       }
     });
@@ -279,6 +283,7 @@ function stopLiveSessionTimer(gameId) {
 async function onGameStart(game) {
   console.log('Game Started:', game);  // Add this to check the game object
   const now = new Date();
+  logGameStart(game.id, game.name);
   startLiveSessionTimer(game.id, now);
   
   mainWindow.webContents.send('game-status-update', {
@@ -291,6 +296,7 @@ async function onGameStart(game) {
 
 async function onGameStop(game) {
   console.log('Game Stopped:', game);  // Add this to check the game object
+  logGameEnd(game.id); 
   stopLiveSessionTimer(game.id);
   
   mainWindow.webContents.send('game-status-update', {

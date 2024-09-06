@@ -121,31 +121,32 @@ function loadSessionHistory() {
     `;
 
     sessions.forEach((session) => {
-      const row = document.createElement('tr');
-
-      const gameNameCell = document.createElement('td');
-      gameNameCell.textContent = session.game_name;
-
-      const startTimeCell = document.createElement('td');
-      startTimeCell.textContent = new Date(session.start_time).toLocaleString();
-
-      const endTimeCell = document.createElement('td');
-      endTimeCell.textContent = session.end_time
-        ? new Date(session.end_time).toLocaleString()
-        : 'In Progress';
-
-      const durationCell = document.createElement('td');
-      durationCell.textContent = session.duration || 'Calculating...';
-
-      row.appendChild(gameNameCell);
-      row.appendChild(startTimeCell);
-      row.appendChild(endTimeCell);
-      row.appendChild(durationCell);
-
-      sessionTable.appendChild(row);
+        const row = document.createElement('tr');
+  
+        const gameNameCell = document.createElement('td');
+        gameNameCell.textContent = session.game_name;
+  
+        const startTimeCell = document.createElement('td');
+        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+  
+        const endTimeCell = document.createElement('td');
+        endTimeCell.textContent = session.end_time
+          ? new Date(session.end_time).toLocaleString()
+          : 'In Progress';
+  
+        const durationCell = document.createElement('td');
+        // Only show "Calculating..." if the duration is null or undefined
+        durationCell.textContent = session.duration != null ? session.duration : 'Calculating...';
+  
+        row.appendChild(gameNameCell);
+        row.appendChild(startTimeCell);
+        row.appendChild(endTimeCell);
+        row.appendChild(durationCell);
+  
+        sessionTable.appendChild(row);
+      });
     });
-  });
-}
+  }
 
 // Function to load game statistics (total time played per game)
 function loadGameStats() {
@@ -261,7 +262,9 @@ function populateGameNameDropdown() {
           : 'In Progress';
   
         const durationCell = document.createElement('td');
-        durationCell.textContent = session.duration || 'Calculating...';
+        durationCell.textContent = session.duration !== null && !isNaN(session.duration) 
+        ? session.duration 
+        : (session.end_time ? 'Calculating...' : 'In Progress');
   
         row.appendChild(gameNameCell);
         row.appendChild(startTimeCell);
