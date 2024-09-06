@@ -1,8 +1,8 @@
-/* Dark theme for Game Tracker */
+/* Softer dark theme for Game Tracker */
 
 body {
-    background-color: #121212 !important;
-    color: #e0e0e0 !important;
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -13,86 +13,86 @@ body {
 }
 
 h1, h2, h3 {
-    color: #bb86fc !important;
+    color: #c792ea !important;
 }
 
 /* Tabs */
 .nav-tabs {
-    border-bottom: 1px solid #bb86fc !important;
+    border-bottom: 1px solid #c792ea !important;
 }
 
 .nav-tabs .nav-link {
-    color: #e0e0e0 !important;
-    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+    background-color: #252525 !important;
     border: 1px solid transparent !important;
 }
 
 .nav-tabs .nav-link:hover {
-    border-color: #bb86fc !important;
+    border-color: #c792ea !important;
 }
 
 .nav-tabs .nav-link.active {
-    color: #bb86fc !important;
-    background-color: #121212 !important;
-    border-color: #bb86fc #bb86fc #121212 !important;
+    color: #c792ea !important;
+    background-color: #1e1e1e !important;
+    border-color: #c792ea #c792ea #1e1e1e !important;
 }
 
 /* Forms */
 .form-control, .form-select {
-    background-color: #1e1e1e !important;
-    border: 1px solid #333 !important;
-    color: #e0e0e0 !important;
+    background-color: #252525 !important;
+    border: 1px solid #444 !important;
+    color: #d4d4d4 !important;
 }
 
 .form-control:focus, .form-select:focus {
     background-color: #2a2a2a !important;
-    border-color: #bb86fc !important;
-    box-shadow: 0 0 0 0.2rem rgba(187, 134, 252, 0.25) !important;
+    border-color: #c792ea !important;
+    box-shadow: 0 0 0 0.2rem rgba(199, 146, 234, 0.25) !important;
 }
 
 /* Buttons */
 .btn-primary {
-    background-color: #bb86fc !important;
-    border-color: #bb86fc !important;
-    color: #121212 !important;
+    background-color: #c792ea !important;
+    border-color: #c792ea !important;
+    color: #1e1e1e !important;
 }
 
 .btn-primary:hover {
-    background-color: #a370f7 !important;
-    border-color: #a370f7 !important;
+    background-color: #b77ddb !important;
+    border-color: #b77ddb !important;
 }
 
 .btn-secondary {
-    background-color: #03dac6 !important;
-    border-color: #03dac6 !important;
-    color: #121212 !important;
+    background-color: #82aaff !important;
+    border-color: #82aaff !important;
+    color: #1e1e1e !important;
 }
 
 .btn-secondary:hover {
-    background-color: #02b3a4 !important;
-    border-color: #02b3a4 !important;
+    background-color: #6d8ce3 !important;
+    border-color: #6d8ce3 !important;
 }
 
 /* Tables */
 .table {
-    color: #e0e0e0 !important;
+    color: #d4d4d4 !important;
 }
 
 .table thead th {
-    border-bottom: 2px solid #333 !important;
+    border-bottom: 2px solid #444 !important;
 }
 
 .table td, .table th {
-    border-top: 1px solid #333 !important;
+    border-top: 1px solid #444 !important;
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(187, 134, 252, 0.1) !important;
+    background-color: rgba(199, 146, 234, 0.1) !important;
 }
 
 /* Charts */
 canvas {
-    background-color: #1e1e1e !important;
+    background-color: #252525 !important;
     border-radius: 4px;
     padding: 10px;
 }
@@ -104,8 +104,8 @@ canvas {
 }
 
 #games-list li, #game-status-list li {
-    background-color: #1e1e1e !important;
-    border: 1px solid #333 !important;
+    background-color: #252525 !important;
+    border: 1px solid #444 !important;
     border-radius: 4px;
     margin-bottom: 10px;
     padding: 10px;
@@ -113,8 +113,8 @@ canvas {
 
 /* Tab content */
 .tab-pane {
-    background-color: #121212 !important;
-    color: #e0e0e0 !important;
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
 }
 
 /* Responsive design */
@@ -122,4 +122,13 @@ canvas {
     .container {
         padding: 10px;
     }
+}
+
+/* Chart sizes */
+.col-md-6 canvas {
+    height: 300px !important;
+}
+
+.col-12 canvas {
+    height: 400px !important;
 }
