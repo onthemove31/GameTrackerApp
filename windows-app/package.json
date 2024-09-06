@@ -1,0 +1,33 @@
+{
+  "name": "game-tracker",
+  "version": "1.0.0",
+  "description": "An app to track game play time",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.yourname.gametracker",
+    "productName": "GameTracker",
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "games.db",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    }
+  },
+  "devDependencies": {
+    "electron": "^25.9.8",
+    "electron-builder": "^24.6.0"
+  }
+}
