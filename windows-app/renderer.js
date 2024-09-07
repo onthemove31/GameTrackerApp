@@ -524,15 +524,15 @@ function loadInsightsContent() {
         <h1>Insights</h1>
         <p>Here are some insights based on your gaming data:</p>
         <ul>
-            <li>Total Playtime: <span id="total-playtime"></span></li>
-            <li>Longest Session: <span id="longest-session"></span></li>
-            <li>Average Playtime: <span id="avg-playtime"></span></li>
-            <li>Peak Play Hour: <span id="peak-play-hour"></span></li>
-            <li>Weekend Playtime: <span id="weekend-playtime"></span></li>
-            <li>Weekday Playtime: <span id="weekday-playtime"></span></li>
-            <li>Longest Streak: <span id="longest-streak"></span></li>
-            <li>Session Trend: <span id="session-trend"></span></li>
-            <li>Next Game Prediction: <span id="next-game-prediction"></span></li>
+            <li><b>Total Playtime:</b> <span id="total-playtime"></span></li>
+            <li><b>Longest Session:</b> <span id="longest-session"></span></li>
+            <li><b>Average Playtime:</b> <span id="avg-playtime"></span></li>
+            <li><b>Peak Play Hour:</b> <span id="peak-play-hour"></span></li>
+            <li><b>Weekend Playtime:</b> <span id="weekend-playtime"></span></li>
+            <li><b>Weekday Playtime:</b> <span id="weekday-playtime"></span></li>
+            <li><b>Longest Streak:</b> <span id="longest-streak"></span></li>
+            <li><b>Session Trend:</b> <span id="session-trend"></span></li>
+            <li><b>Next Game Prediction:</b> <span id="next-game-prediction"></span></li>
         </ul>
     `;
     document.getElementById('insights-content').innerHTML = insightsContent;

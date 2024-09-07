@@ -13,4 +13,7 @@ node_modules/
 *.log
 
 package-lock.json
-windwos-app/dist
+windows-app/data_wrangler
+windows-app/detect-tests
+windows-app/experiments
+windows-app/updated_rendere.js
