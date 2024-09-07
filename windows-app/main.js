@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { execFile } = require('child_process');
+const insights = require('./insights');  // Import insights module
+const { loadSessionData, calculateInsights, createFeedback } = require('./insights');
 
 // Initialize the SQLite database
 const db = new sqlite3.Database('games.db');
@@ -137,6 +139,19 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 }
+
+// Handle the 'get-insights' event from the renderer
+ipcMain.handle('get-insights', async (event) => {
+  return new Promise((resolve, reject) => {
+    const dbPath = path.join(__dirname, 'games.db'); // Ensure the correct path for your database
+
+    loadSessionData(dbPath, (sessionData) => {
+      const insights = calculateInsights(sessionData);
+      const feedback = createFeedback(insights);
+      resolve(feedback);  // Send the feedback back to the renderer process
+    });
+  });
+});
 
 app.whenReady().then(createWindow);
 

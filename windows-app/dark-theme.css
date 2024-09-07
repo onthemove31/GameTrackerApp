@@ -132,3 +132,19 @@ canvas {
 .col-12 canvas {
     height: 400px !important;
 }
+
+/* Insights UI */
+#insights {
+    margin-top: 20px;
+  }
+  
+  #insights p {
+    font-size: 18px;
+    margin: 10px 0;
+  }
+  
+  #variance-by-game p {
+    font-size: 16px;
+    margin: 5px 0;
+  }
+  

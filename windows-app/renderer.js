@@ -515,3 +515,26 @@ function populateGameNameDropdown() {
     const b = Math.floor(Math.random() * 255);
     return `rgba(${r}, ${g}, ${b}, 0.7)`;
   }
+
+  ////////////////////////////////// Code for Insights ////////////////////////
+
+    // Function to display feedback based on insights
+  document.getElementById('view-insights-btn').addEventListener('click', async () => {
+  try {
+    // Request insights from the main process
+    const feedback = await ipcRenderer.invoke('get-insights');
+    
+    // Display feedback in the UI
+    document.getElementById('total-playtime').innerText = feedback.totalPlaytime;
+    document.getElementById('longest-session').innerText = feedback.longestSession;
+    document.getElementById('avg-playtime').innerText = feedback.avgPlaytime;
+    document.getElementById('peak-play-hour').innerText = feedback.peakPlayHour;
+    document.getElementById('weekend-playtime').innerText = feedback.weekendPlaytime;
+    document.getElementById('weekday-playtime').innerText = feedback.weekdayPlaytime;
+    document.getElementById('longest-streak').innerText = feedback.longestStreak;
+    document.getElementById('session-trend').innerText = feedback.sessionTrend;
+    document.getElementById('next-game-prediction').innerText = feedback.nextGamePrediction;
+  } catch (error) {
+    console.error('Error fetching insights:', error);
+  }
+});
