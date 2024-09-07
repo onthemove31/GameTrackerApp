@@ -146,9 +146,13 @@ ipcMain.handle('get-insights', async (event) => {
     const dbPath = path.join(__dirname, 'games.db'); // Ensure the correct path for your database
 
     loadSessionData(dbPath, (sessionData) => {
-      const insights = calculateInsights(sessionData);
-      const feedback = createFeedback(insights);
-      resolve(feedback);  // Send the feedback back to the renderer process
+      if (sessionData) {
+        const insights = calculateInsights(sessionData);
+        const feedback = createFeedback(insights);
+        resolve(feedback);  // Send the feedback back to the renderer process
+      } else {
+        reject(new Error("Failed to load session data."));
+      }
     });
   });
 });
@@ -565,4 +569,9 @@ ipcMain.handle('get-playtime-by-time-of-day', async (event, filters) => {
       }
     });
   });
+});
+
+// Handle the 'open-about' event from the renderer
+ipcMain.on('open-about', (event) => {
+  mainWindow.loadFile('about.html'); // Load the About page
 });

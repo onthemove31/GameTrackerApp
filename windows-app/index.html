@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
+<!--     <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+    </div> -->
     <div class="container">
         <h1 class="mt-4 mb-4">Game Tracker</h1>
 
@@ -24,6 +27,12 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats-content" type="button" role="tab">Statistics</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="insights-tab" data-bs-toggle="tab" href="#insights-content" role="tab">Insights</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="about-tab" data-bs-toggle="tab" href="#about-content" role="tab">About</a>
             </li>
         </ul>
 
@@ -78,9 +87,7 @@
                 </table>
             </div>
 
-            <button id="view-insights-btn">View Insights</button>
-
-            <div id="insights">
+<!--             <div id="insights">
               <p id="total-playtime"></p>
               <p id="longest-session"></p>
               <p id="avg-playtime"></p>
@@ -91,7 +98,7 @@
               <p id="session-trend"></p>
               <p id="next-game-prediction"></p>
             </div>
-
+ -->
             <div class="tab-pane fade" id="stats-content" role="tabpanel">
                 <h2>Statistics</h2>
                 <div class="row mb-3">
@@ -116,6 +123,10 @@
                         <canvas id="playtime-over-time-chart"></canvas>
                     </div>
                     <div class="col-md-6 mb-4">
+                        <h3>Playtime By Time of Day (Hours)</h3>
+                        <canvas id="playtime-by-time-of-day-chart"></canvas>
+                    </div>
+                    <div class="col-md-6 mb-4">
                         <h3>Total Playtime Per Game (Hours)</h3>
                         <canvas id="total-playtime-chart"></canvas>
                     </div>
@@ -135,11 +146,13 @@
                         <h3>Time Played Per Day (Hours)</h3>
                         <canvas id="time-played-per-day-chart"></canvas>
                     </div>
-                    <div class="col-md-6 mb-4">
-                        <h3>Playtime By Time of Day (Hours)</h3>
-                        <canvas id="playtime-by-time-of-day-chart"></canvas>
-                    </div>
                 </div>
+            </div>
+            <div class="tab-pane fade" id="insights-content" role="tabpanel">
+                <!-- About content will be loaded here -->
+            </div>
+            <div class="tab-pane fade" id="about-content" role="tabpanel">
+                <!-- About content will be loaded here -->
             </div>
         </div>
     </div>

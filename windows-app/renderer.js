@@ -518,23 +518,65 @@ function populateGameNameDropdown() {
 
   ////////////////////////////////// Code for Insights ////////////////////////
 
-    // Function to display feedback based on insights
-  document.getElementById('view-insights-btn').addEventListener('click', async () => {
-  try {
-    // Request insights from the main process
-    const feedback = await ipcRenderer.invoke('get-insights');
-    
-    // Display feedback in the UI
-    document.getElementById('total-playtime').innerText = feedback.totalPlaytime;
-    document.getElementById('longest-session').innerText = feedback.longestSession;
-    document.getElementById('avg-playtime').innerText = feedback.avgPlaytime;
-    document.getElementById('peak-play-hour').innerText = feedback.peakPlayHour;
-    document.getElementById('weekend-playtime').innerText = feedback.weekendPlaytime;
-    document.getElementById('weekday-playtime').innerText = feedback.weekdayPlaytime;
-    document.getElementById('longest-streak').innerText = feedback.longestStreak;
-    document.getElementById('session-trend').innerText = feedback.sessionTrend;
-    document.getElementById('next-game-prediction').innerText = feedback.nextGamePrediction;
-  } catch (error) {
-    console.error('Error fetching insights:', error);
-  }
-});
+// Function to load Insights content
+function loadInsightsContent() {
+    const insightsContent = `
+        <h1>Insights</h1>
+        <p>Here are some insights based on your gaming data:</p>
+        <ul>
+            <li>Total Playtime: <span id="total-playtime"></span></li>
+            <li>Longest Session: <span id="longest-session"></span></li>
+            <li>Average Playtime: <span id="avg-playtime"></span></li>
+            <li>Peak Play Hour: <span id="peak-play-hour"></span></li>
+            <li>Weekend Playtime: <span id="weekend-playtime"></span></li>
+            <li>Weekday Playtime: <span id="weekday-playtime"></span></li>
+            <li>Longest Streak: <span id="longest-streak"></span></li>
+            <li>Session Trend: <span id="session-trend"></span></li>
+            <li>Next Game Prediction: <span id="next-game-prediction"></span></li>
+        </ul>
+    `;
+    document.getElementById('insights-content').innerHTML = insightsContent;
+
+    // Fetch and display insights data
+    fetchInsightsData();
+}
+
+// Function to fetch insights data from the main process
+async function fetchInsightsData() {
+    try {
+        const feedback = await ipcRenderer.invoke('get-insights');
+        document.getElementById('total-playtime').innerText = feedback.totalPlaytime || 'N/A';
+        document.getElementById('longest-session').innerText = feedback.longestSession || 'N/A';
+        document.getElementById('avg-playtime').innerText = feedback.avgPlaytime || 'N/A';
+        document.getElementById('peak-play-hour').innerText = feedback.peakPlayHour || 'N/A';
+        document.getElementById('weekend-playtime').innerText = feedback.weekendPlaytime || 'N/A';
+        document.getElementById('weekday-playtime').innerText = feedback.weekdayPlaytime || 'N/A';
+        document.getElementById('longest-streak').innerText = feedback.longestStreak || 'N/A';
+        document.getElementById('session-trend').innerText = feedback.sessionTrend || 'N/A';
+        document.getElementById('next-game-prediction').innerText = feedback.nextGamePrediction || 'N/A';
+    } catch (error) {
+        console.error('Error fetching insights:', error);
+        alert('Failed to load insights data. Please try again later.');
+    }
+}
+
+// Event listener for the Insights tab
+document.getElementById('insights-tab').addEventListener('click', loadInsightsContent);
+
+
+/// LOAD ABOUT CONTENT ///
+
+function loadAboutContent() {
+  const aboutContent = `
+      <h1>About Game Tracker</h1>
+      <p>Game Tracker is an Electron-based application designed to help gamers track their gaming sessions and analyze their playtime statistics.</p>
+      <h2>Developer Information</h2>
+      <p>Developed by [Your Name]</p>
+      <p>Email: [Your Email]</p>
+      <p>GitHub: <a href="[Your GitHub Profile]" target="_blank">[Your GitHub Profile]</a></p>
+  `;
+  document.getElementById('about-content').innerHTML = aboutContent;
+}
+
+// Event listener for the About tab
+document.getElementById('about-tab').addEventListener('click', loadAboutContent);
