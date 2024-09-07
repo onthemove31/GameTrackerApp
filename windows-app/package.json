@@ -17,7 +17,8 @@
     "appId": "com.example.app",
     "productName": "GameTracker",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "assets"
     },
     "files": [
       "build/**/*",
@@ -31,8 +32,10 @@
     "win": {
       "target": [
         "nsis"
-      ]
-    },
+      ],
+      "icon": "assets/icons/app-icon.ico"
+    }
+    ,
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
