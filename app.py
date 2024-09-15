@@ -1,9 +1,23 @@
-from flask import Flask, render_template, jsonify, request
-from database import get_sessions
-from insights import calculate_insights
+from flask import Flask, render_template, jsonify
+from flask_sqlalchemy import SQLAlchemy
 import os
 
 app = Flask(__name__)
+
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL')  # Use the environment variable for your database URL
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Define a model for sessions
+class GameSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    game_name = db.Column(db.String(50), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
 
 @app.route('/')
 def home():
@@ -11,24 +25,12 @@ def home():
 
 @app.route('/insights')
 def insights():
-    # Fetch session data from the database
-    session_data = get_sessions()
-
-    # Calculate insights
-    insights = calculate_insights(session_data)
+    # Fetch session data and calculate insights
+    sessions = GameSession.query.all()
+    session_data = [(s.game_name, s.start_time, s.end_time) for s in sessions]
+    insights = calculate_insights(session_data)  # assuming you have the `calculate_insights` function
 
     return jsonify(insights)
-
-# API to handle backup and restore functionality
-@app.route('/backup', methods=['POST'])
-def backup():
-    # Logic to backup the SQLite database to cloud (e.g., Google Drive)
-    return jsonify({'status': 'Backup successful'})
-
-@app.route('/restore', methods=['POST'])
-def restore():
-    # Logic to restore the SQLite database from cloud
-    return jsonify({'status': 'Restore successful'})
 
 if __name__ == '__main__':
     app.run(debug=True)
