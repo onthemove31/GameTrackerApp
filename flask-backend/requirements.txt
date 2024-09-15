@@ -1,0 +1,5 @@
+Flask==2.1.0
+sqlite3
+gunicorn
+google-auth  # Optional for Google Drive integration
+requests
