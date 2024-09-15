@@ -1,0 +1,178 @@
+/* Softer dark theme for Game Tracker */
+
+body {
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1, h2, h3 {
+    color: #c792ea !important;
+}
+
+/* Tabs */
+.nav-tabs {
+    border-bottom: 1px solid #c792ea !important;
+}
+
+.nav-tabs .nav-link {
+    color: #d4d4d4 !important;
+    background-color: #252525 !important;
+    border: 1px solid transparent !important;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: #c792ea !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: #c792ea !important;
+    background-color: #1e1e1e !important;
+    border-color: #c792ea #c792ea #1e1e1e !important;
+}
+
+/* Forms */
+.form-control, .form-select {
+    background-color: #252525 !important;
+    border: 1px solid #444 !important;
+    color: #d4d4d4 !important;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #2a2a2a !important;
+    border-color: #c792ea !important;
+    box-shadow: 0 0 0 0.2rem rgba(199, 146, 234, 0.25) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #c792ea !important;
+    border-color: #c792ea !important;
+    color: #1e1e1e !important;
+}
+
+.btn-primary:hover {
+    background-color: #b77ddb !important;
+    border-color: #b77ddb !important;
+}
+
+.btn-secondary {
+    background-color: #82aaff !important;
+    border-color: #82aaff !important;
+    color: #1e1e1e !important;
+}
+
+.btn-secondary:hover {
+    background-color: #6d8ce3 !important;
+    border-color: #6d8ce3 !important;
+}
+
+/* Tables */
+.table {
+    color: #d4d4d4 !important;
+}
+
+.table thead th {
+    border-bottom: 2px solid #444 !important;
+}
+
+.table td, .table th {
+    border-top: 1px solid #444 !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(199, 146, 234, 0.1) !important;
+}
+
+/* Charts */
+canvas {
+    background-color: #252525 !important;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+/* Custom styles for specific elements */
+#games-list, #game-status-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+#games-list li, #game-status-list li {
+    background-color: #252525 !important;
+    border: 1px solid #444 !important;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    padding: 10px;
+}
+
+/* Tab content */
+.tab-pane {
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+}
+
+/* Chart sizes */
+.col-md-6 canvas {
+    height: 300px !important;
+}
+
+.col-12 canvas {
+    height: 400px !important;
+}
+
+/* Insights UI */
+#insights {
+    margin-top: 20px;
+  }
+  
+  #insights p {
+    font-size: 18px;
+    margin: 10px 0;
+  }
+  
+  #variance-by-game p {
+    font-size: 16px;
+    margin: 5px 0;
+  }
+  
+  /* Code to display simple load animation */
+  
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Ensure it is on top of other content */
+}
+
+.spinner {
+    border: 8px solid rgba(255, 255, 255, 0.3);
+    border-top: 8px solid #ffffff; /* Spinner color */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

@@ -8,6 +8,28 @@ const addGameBtn = document.getElementById('add-game-btn');
 const gamesList = document.getElementById('games-list');
 const gameStatusList = document.getElementById('game-status-list');
 
+let currentStatsFilters = {
+  gameName: '',
+  startDate: '',
+  endDate: ''
+};
+
+function initializeFilters() {
+  // Populate game name dropdown
+  populateStatsGameNameDropdown();
+
+  // Set default date range (e.g., last 30 days)
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+  document.getElementById('stats-filter-start-date').valueAsDate = thirtyDaysAgo;
+  document.getElementById('stats-filter-end-date').valueAsDate = today;
+
+  // Update currentStatsFilters
+  currentStatsFilters.startDate = thirtyDaysAgo.toISOString().split('T')[0];
+  currentStatsFilters.endDate = today.toISOString().split('T')[0];
+}
+
 // Open file dialog to browse for the game executable
 browseBtn.addEventListener('click', () => {
     ipcRenderer.invoke('open-file-dialog').then(result => {
@@ -106,82 +128,455 @@ trackingTab.addEventListener('click', () => switchTab(trackingTab, trackingConte
 historyTab.addEventListener('click', () => switchTab(historyTab, historyContent));
 statsTab.addEventListener('click', () => switchTab(statsTab, statsContent));
 
-// Function to load session history
-function loadSessionHistory() {
-  ipcRenderer.invoke('get-session-history').then((sessions) => {
-    const sessionTable = document.getElementById('session-history');
+// Load Game Statistics
+async function loadStatistics() {
+    try {
+        // Total Playtime Per Game
+        console.log('Sending filters for total playtime:', JSON.stringify(currentStatsFilters, null, 2));
+        let totalPlaytimeData = await ipcRenderer.invoke('get-total-playtime-per-game', currentStatsFilters);
+        console.log('Received total playtime data:', totalPlaytimeData);
+        createChart('total-playtime-chart', 'Total Playtime (hours)', totalPlaytimeData, 'bar', 'total_playtime');
 
-    sessionTable.innerHTML = `
-      <tr>
-        <th>Game Name</th>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Duration (minutes)</th>
-      </tr>
-    `;
+        // Average Session Duration Per Game
+        console.log('Sending filters for average session duration:', JSON.stringify(currentStatsFilters, null, 2));
+        let avgSessionData = await ipcRenderer.invoke('get-average-session-duration-per-game', currentStatsFilters);
+        console.log('Received average session duration data:', avgSessionData);
+        createChart('avg-session-duration-chart', 'Average Session Duration (hours)', avgSessionData, 'bar', 'avg_session_duration');
 
-    sessions.forEach((session) => {
-      const row = document.createElement('tr');
+        // Longest Play Session Per Game
+        console.log('Sending filters for longest play session:', JSON.stringify(currentStatsFilters, null, 2));
+        let longestSessionData = await ipcRenderer.invoke('get-longest-play-session-per-game', currentStatsFilters);
+        console.log('Received longest play session data:', longestSessionData);
+        createChart('longest-session-chart', 'Longest Play Session (hours)', longestSessionData, 'bar', 'longest_session');
 
-      const gameNameCell = document.createElement('td');
-      gameNameCell.textContent = session.game_name;
+        // Playtime Over Time (Daily)
+        console.log('Sending filters for playtime over time:', JSON.stringify(currentStatsFilters, null, 2));
+        let playtimeOverTimeData = await ipcRenderer.invoke('get-playtime-over-time', currentStatsFilters);
+        console.log('Received playtime over time data:', playtimeOverTimeData);
+        createTimeSeriesChart('playtime-over-time-chart', 'Daily Playtime', playtimeOverTimeData);
 
-      const startTimeCell = document.createElement('td');
-      startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+        // Number of Sessions Per Game
+        console.log('Sending filters for sessions per game:', JSON.stringify(currentStatsFilters, null, 2));
+        let sessionsPerGameData = await ipcRenderer.invoke('get-sessions-per-game', currentStatsFilters);
+        console.log('Received sessions per game data:', sessionsPerGameData);
+        createChart('session-count-chart', 'Number of Sessions', sessionsPerGameData, 'bar', 'session_count');
 
-      const endTimeCell = document.createElement('td');
-      endTimeCell.textContent = session.end_time
-        ? new Date(session.end_time).toLocaleString()
-        : 'In Progress';
+        // Time Played Per Day
+        console.log('Sending filters for time played per day:', JSON.stringify(currentStatsFilters, null, 2));
+        let timePlayedPerDayData = await ipcRenderer.invoke('get-time-played-per-day', currentStatsFilters);
+        console.log('Received time played per day data:', timePlayedPerDayData);
+        createChart('time-played-per-day-chart', 'Total Playtime (hours)', timePlayedPerDayData, 'bar', 'total_playtime', 'day_of_week');
 
-      const durationCell = document.createElement('td');
-      durationCell.textContent = session.duration || 'Calculating...';
-
-      row.appendChild(gameNameCell);
-      row.appendChild(startTimeCell);
-      row.appendChild(endTimeCell);
-      row.appendChild(durationCell);
-
-      sessionTable.appendChild(row);
-    });
-  });
+        // Playtime Distribution By Time of Day
+        console.log('Sending filters for playtime by time of day:', JSON.stringify(currentStatsFilters, null, 2));
+        let timeOfDayData = await ipcRenderer.invoke('get-playtime-by-time-of-day', currentStatsFilters);
+        console.log('Received playtime by time of day data:', timeOfDayData);
+        createStackedHorizontalBarChart('playtime-by-time-of-day-chart', 'Playtime Distribution By Time of Day', timeOfDayData);
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        // Optionally, display an error message to the user
+    }
 }
 
-// Function to load game statistics (total time played per game)
-function loadGameStats() {
-  ipcRenderer.invoke('get-total-time-per-game').then((totals) => {
-    const statsTable = document.getElementById('game-stats');
-
-    statsTable.innerHTML = `
-      <tr>
-        <th>Game Name</th>
-        <th>Total Time Played (minutes)</th>
-      </tr>
-    `;
-
-    totals.forEach((game) => {
-      const row = document.createElement('tr');
-
-      const gameNameCell = document.createElement('td');
-      gameNameCell.textContent = game.game_name;
-
-      const totalTimeCell = document.createElement('td');
-      totalTimeCell.textContent = game.total_duration || 0;
-
-      row.appendChild(gameNameCell);
-      row.appendChild(totalTimeCell);
-
-      statsTable.appendChild(row);
+function populateStatsGameNameDropdown() {
+    const dropdown = document.getElementById('stats-filter-game-name');
+    ipcRenderer.invoke('get-unique-game-names').then((games) => {
+        dropdown.innerHTML = '<option value="">All Games</option>';
+        games.forEach((game) => {
+            const option = document.createElement('option');
+            option.value = game.game_name;
+            option.textContent = game.game_name;
+            dropdown.appendChild(option);
+        });
     });
-  });
 }
 
-// Call these functions when the app loads
-loadSessionHistory();
-loadGameStats();
-
-// Refresh the data when game status updates
-ipcRenderer.on('game-status-update', (event, data) => {
-  loadSessionHistory();
-  loadGameStats();
+document.getElementById('stats-apply-filters-btn').addEventListener('click', () => {
+  currentStatsFilters.gameName = document.getElementById('stats-filter-game-name').value;
+  currentStatsFilters.startDate = document.getElementById('stats-filter-start-date').value || null;
+  currentStatsFilters.endDate = document.getElementById('stats-filter-end-date').value || null;
+  console.log('Applying filters:', JSON.stringify(currentStatsFilters, null, 2));
+  loadStatistics();
 });
+
+// Modify the existing stats tab click event listener
+document.getElementById('stats-tab').addEventListener('click', () => {
+    switchTab(statsTab, statsContent);
+    initializeFilters();  // Reset filters to default
+    loadStatistics();     // Load all data
+});
+
+// Function to populate the game name dropdown with unique game names
+function populateGameNameDropdown() {
+    ipcRenderer.invoke('get-unique-game-names').then((gameNames) => {
+      const gameNameDropdown = document.getElementById('filter-game-name');
+  
+      // Clear existing options
+      gameNameDropdown.innerHTML = '<option value="">All Games</option>';
+  
+      // Add the unique game names as options
+      gameNames.forEach((game) => {
+        const option = document.createElement('option');
+        option.value = game.game_name;
+        option.textContent = game.game_name;
+        gameNameDropdown.appendChild(option);
+      });
+      gameNameDropdown.addEventListener('change', () => {
+        const selectedGameName = gameNameDropdown.value;
+        loadSessionHistory(selectedGameName);  // Pass the selected game name to loadSessionHistory
+      });
+    });
+  }
+  
+  // Function to load session history from the database, with optional filters
+  function loadSessionHistory(gameName = '', startDate = '', endDate = '') {
+    ipcRenderer.invoke('get-session-history', { gameName, startDate, endDate }).then((sessions) => {
+      const sessionTable = document.getElementById('session-history');
+  
+      // Clear existing session history
+      sessionTable.innerHTML = `
+        <tr>
+          <th>Game Name</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration (hours)</th>
+        </tr>
+      `;
+  
+      sessions.forEach((session) => {
+        const row = document.createElement('tr');
+  
+        const gameNameCell = document.createElement('td');
+        gameNameCell.textContent = session.game_name;
+  
+        const startTimeCell = document.createElement('td');
+        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+  
+        const endTimeCell = document.createElement('td');
+        endTimeCell.textContent = session.end_time
+          ? new Date(session.end_time).toLocaleString()
+          : 'In Progress';
+  
+        const durationCell = document.createElement('td');
+        if (session.duration !== null && !isNaN(session.duration)) {
+          const durationHours = (session.duration / 60).toFixed(2);
+          durationCell.textContent = `${durationHours} hours`;
+        } else {
+          durationCell.textContent = session.end_time ? 'Calculating...' : 'In Progress';
+        }
+  
+        row.appendChild(gameNameCell);
+        row.appendChild(startTimeCell);
+        row.appendChild(endTimeCell);
+        row.appendChild(durationCell);
+  
+        sessionTable.appendChild(row);
+      });
+    });
+  }
+  
+  // Event listener for the Refresh button
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    // Call loadSessionHistory with no filters to refresh the full table
+    loadSessionHistory();
+  });
+  
+  // Event listener for the Apply Filters button
+  document.getElementById('apply-filters-btn').addEventListener('click', () => {
+    const gameName = document.getElementById('filter-game-name').value;
+    const startDate = document.getElementById('filter-start-date').value;
+    const endDate = document.getElementById('filter-end-date').value;
+  
+    // Call loadSessionHistory with the filters applied
+    loadSessionHistory(gameName, startDate, endDate);
+  });
+  
+  // Populate the game name dropdown on app start
+  populateGameNameDropdown();
+  
+  // Load session history on app start
+  loadSessionHistory();
+  
+  function createChart(chartId, label, data, type, dataKey, labelKey = 'game_name') {
+    if (!data || data.length === 0) {
+        console.log(`No data available for chart: ${chartId}`);
+        return;
+    }
+
+    const ctx = document.getElementById(chartId).getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.myCharts && window.myCharts[chartId]) {
+        window.myCharts[chartId].destroy();
+    }
+
+    // Convert minutes to hours
+    const hoursData = data.map(item => ({
+        ...item,
+        [dataKey]: item[dataKey] / 60
+        
+    }));
+
+    // Create new chart
+    window.myCharts = window.myCharts || {};
+    window.myCharts[chartId] = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: hoursData.map(item => item[labelKey]),
+            datasets: [{
+                label: label,
+                data: hoursData.map(item => item[dataKey]),
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Hours'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' hours';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+  }
+  
+  function createTimeSeriesChart(chartId, label, data) {
+    const ctx = document.getElementById(chartId).getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.myCharts && window.myCharts[chartId]) {
+        window.myCharts[chartId].destroy();
+    }
+
+    // Convert minutes to hours
+    const hoursData = data.map(item => ({
+        ...item,
+        total_playtime: item.total_playtime / 60
+    }));
+
+    window.myCharts = window.myCharts || {};
+    window.myCharts[chartId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hoursData.map(item => item.play_date),
+            datasets: [{
+                label: label,
+                data: hoursData.map(item => item.total_playtime),
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: {
+                            day: 'MMM d'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Playtime (hours)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' hours';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+  }
+
+  function createStackedHorizontalBarChart(chartId, label, data) {
+    const ctx = document.getElementById(chartId).getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.myCharts && window.myCharts[chartId]) {
+        window.myCharts[chartId].destroy();
+    }
+    
+    // Process data and convert minutes to hours
+    const games = [...new Set(data.map(item => item.game_name))];
+    const timeOfDayCategories = ['Night (12AM-6AM)', 'Morning (6AM-12PM)', 'Afternoon (12PM-6PM)', 'Evening (6PM-12AM)'];
+    
+    const datasets = games.map(game => {
+      return {
+        label: game,
+        data: timeOfDayCategories.map(category => {
+          const item = data.find(d => d.game_name === game && d.time_of_day === category);
+          return item ? item.total_playtime / 60 : 0;
+        }),
+        backgroundColor: getRandomColor(),
+      };
+    });
+  
+    window.myCharts = window.myCharts || {};
+    window.myCharts[chartId] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: timeOfDayCategories,
+        datasets: datasets
+      },
+      options: {
+        indexAxis: 'y',
+        scales: {
+          x: {
+            stacked: true,
+            title: {
+              display: true,
+              text: 'Total Playtime (hours)'
+            }
+          },
+          y: {
+            stacked: true
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: label
+          },
+          legend: {
+            position: 'right'
+          },
+          tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.x !== null) {
+                        label += context.parsed.x.toFixed(2) + ' hours';
+                    }
+                    return label;
+                }
+            }
+          }
+        },
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  }
+  
+  // Helper function to generate random colors for the chart
+  function getRandomColor() {
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    return `rgba(${r}, ${g}, ${b}, 0.7)`;
+  }
+
+  ////////////////////////////////// Code for Insights ////////////////////////
+
+// Function to load Insights content
+function loadInsightsContent() {
+    const insightsContent = `
+        <h1>Insights</h1>
+        <p>Here are some insights based on your gaming data:</p>
+        <ul>
+            <li><b>Total Playtime:</b> <span id="total-playtime"></span></li>
+            <li><b>Longest Session:</b> <span id="longest-session"></span></li>
+            <li><b>Average Playtime:</b> <span id="avg-playtime"></span></li>
+            <li><b>Peak Play Hour:</b> <span id="peak-play-hour"></span></li>
+            <li><b>Weekend Playtime:</b> <span id="weekend-playtime"></span></li>
+            <li><b>Weekday Playtime:</b> <span id="weekday-playtime"></span></li>
+            <li><b>Longest Streak:</b> <span id="longest-streak"></span></li>
+            <li><b>Session Trend:</b> <span id="session-trend"></span></li>
+            <li><b>Next Game Prediction:</b> <span id="next-game-prediction"></span></li>
+        </ul>
+    `;
+    document.getElementById('insights-content').innerHTML = insightsContent;
+
+    // Fetch and display insights data
+    fetchInsightsData();
+}
+
+// Function to fetch insights data from the main process
+async function fetchInsightsData() {
+    try {
+        const feedback = await ipcRenderer.invoke('get-insights');
+        document.getElementById('total-playtime').innerText = feedback.totalPlaytime || 'N/A';
+        document.getElementById('longest-session').innerText = feedback.longestSession || 'N/A';
+        document.getElementById('avg-playtime').innerText = feedback.avgPlaytime || 'N/A';
+        document.getElementById('peak-play-hour').innerText = feedback.peakPlayHour || 'N/A';
+        document.getElementById('weekend-playtime').innerText = feedback.weekendPlaytime || 'N/A';
+        document.getElementById('weekday-playtime').innerText = feedback.weekdayPlaytime || 'N/A';
+        document.getElementById('longest-streak').innerText = feedback.longestStreak || 'N/A';
+        document.getElementById('session-trend').innerText = feedback.sessionTrend || 'N/A';
+        document.getElementById('next-game-prediction').innerText = feedback.nextGamePrediction || 'N/A';
+    } catch (error) {
+        console.error('Error fetching insights:', error);
+        alert('Failed to load insights data. Please try again later.');
+    }
+}
+
+// Event listener for the Insights tab
+document.getElementById('insights-tab').addEventListener('click', loadInsightsContent);
+
+
+/// LOAD ABOUT CONTENT ///
+
+function loadAboutContent() {
+  const aboutContent = `
+      <h1>About Game Tracker</h1>
+      <p>Game Tracker is an Electron-based application designed to help gamers track their gaming sessions and analyze their playtime statistics.</p>
+      <h2>Developer Information</h2>
+      <p>Developed by [Your Name]</p>
+      <p>Email: [Your Email]</p>
+      <p>GitHub: <a href="[Your GitHub Profile]" target="_blank">[Your GitHub Profile]</a></p>
+  `;
+  document.getElementById('about-content').innerHTML = aboutContent;
+}
+
+// Event listener for the About tab
+document.getElementById('about-tab').addEventListener('click', loadAboutContent);

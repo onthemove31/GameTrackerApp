@@ -1,33 +1,55 @@
 {
-  "name": "game-tracker",
-  "version": "1.0.0",
-  "description": "An app to track game play time",
+  "name": "GameTracker",
+  "version": "1.0.2",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
-  },
-  "build": {
-    "appId": "com.yourname.gametracker",
-    "productName": "GameTracker",
-    "files": [
-      "main.js",
-      "renderer.js",
-      "index.html",
-      "games.db",
-      "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "build"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "build/icon.ico"
-    }
+    "rebuild": "electron-rebuild",
+    "build": "npm run rebuild && electron-builder --win"
   },
   "devDependencies": {
-    "electron": "^25.9.8",
-    "electron-builder": "^24.6.0"
+    "electron": "^32.0.2",
+    "electron-build": "^0.0.3",
+    "electron-builder": "^25.0.5",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.example.app",
+    "productName": "GameTracker",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icons/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "brain.js": "^2.0.0-beta.24",
+    "dotenv": "^16.4.5",
+    "electron-log": "^5.2.0",
+    "electron-oauth2": "^3.0.0",
+    "electron-store": "^10.0.0",
+    "node-powershell": "^5.0.1",
+    "sqlite3": "^5.1.7",
+    "win-version-info": "^6.0.1"
   }
 }
