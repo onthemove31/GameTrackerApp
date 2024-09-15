@@ -34,8 +34,7 @@
         "nsis"
       ],
       "icon": "assets/icons/app-icon.ico"
-    }
-    ,
+    },
     "nsis": {
       "oneClick": false,
       "allowElevation": true,
@@ -43,8 +42,12 @@
     }
   },
   "dependencies": {
+    "axios": "^1.7.7",
     "brain.js": "^2.0.0-beta.24",
+    "dotenv": "^16.4.5",
     "electron-log": "^5.2.0",
+    "electron-oauth2": "^3.0.0",
+    "electron-store": "^10.0.0",
     "node-powershell": "^5.0.1",
     "sqlite3": "^5.1.7",
     "win-version-info": "^6.0.1"
