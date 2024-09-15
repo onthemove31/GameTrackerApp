@@ -1,15 +1,3 @@
-""" from datetime import datetime
-
-# The time string you're working with
-time_string = '2024-09-06T09:28:08.837Z'
-
-# Convert the string to a datetime object
-time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-time_dt = datetime.strptime(time_string, time_format)
-
-print(time_dt)
- """
-
 from datetime import datetime
 
 def calculate_insights(session_data):
