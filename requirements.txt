@@ -1,5 +1,6 @@
 Flask
 SQLAlchemy
+Flask-SQLAlchemy==2.5.1
 psycopg2-binary
 gunicorn
 Werkzeug==2.2.2
