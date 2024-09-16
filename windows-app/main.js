@@ -562,23 +562,32 @@ ipcMain.handle('get-time-played-per-day', async (event, filters) => {
   console.log('Received filters for time played per day:', JSON.stringify(filters, null, 2));
   try {
     let query = `
-      SELECT EXTRACT(DOW FROM start_time) as day_of_week, 
-             SUM(duration) as total_playtime
+      SELECT start_time, SUM(duration) as total_playtime
       FROM sessions
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
-    query = filteredQuery + ' GROUP BY day_of_week ORDER BY day_of_week';
+    query = filteredQuery + ' GROUP BY start_time';
 
     console.log('Time played per day query:', query);
     console.log('Query parameters:', params);
 
     const result = await client.query(query, params);
+    
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const processedResult = result.rows.map(row => ({
-      day_of_week: daysOfWeek[row.day_of_week],
-      total_playtime: row.total_playtime
+    const playtimeByDay = [0, 0, 0, 0, 0, 0, 0];
+
+    result.rows.forEach(row => {
+      const date = new Date(row.start_time);
+      const dayIndex = date.getDay();
+      playtimeByDay[dayIndex] += parseFloat(row.total_playtime);
+    });
+
+    const processedResult = playtimeByDay.map((playtime, index) => ({
+      day_of_week: daysOfWeek[index],
+      total_playtime: playtime
     }));
+
     console.log('Time played per day results:', processedResult);
     return processedResult;
   } catch (err) {
@@ -591,27 +600,52 @@ ipcMain.handle('get-playtime-by-time-of-day', async (event, filters) => {
   console.log('Received filters for playtime by time of day:', JSON.stringify(filters, null, 2));
   try {
     let query = `
-      SELECT 
-        game_name,
-        CASE 
-          WHEN EXTRACT(HOUR FROM start_time) BETWEEN 0 AND 5 THEN 'Night (12AM-6AM)'
-          WHEN EXTRACT(HOUR FROM start_time) BETWEEN 6 AND 11 THEN 'Morning (6AM-12PM)'
-          WHEN EXTRACT(HOUR FROM start_time) BETWEEN 12 AND 17 THEN 'Afternoon (12PM-6PM)'
-          ELSE 'Evening (6PM-12AM)'
-        END as time_of_day,
-        SUM(duration) as total_playtime
+      SELECT game_name, start_time, SUM(duration) as total_playtime
       FROM sessions
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
-    query = filteredQuery + ' GROUP BY game_name, time_of_day ORDER BY game_name, time_of_day';
+    query = filteredQuery + ' GROUP BY game_name, start_time';
 
     console.log('Playtime by time of day query:', query);
     console.log('Query parameters:', params);
 
     const result = await client.query(query, params);
-    console.log('Playtime by time of day results:', result.rows);
-    return result.rows;
+    
+    const playtimeByTimeOfDay = {};
+
+    result.rows.forEach(row => {
+      const date = new Date(row.start_time);
+      const hour = date.getHours();
+      let timeOfDay;
+
+      if (hour >= 0 && hour < 6) timeOfDay = 'Night (12AM-6AM)';
+      else if (hour >= 6 && hour < 12) timeOfDay = 'Morning (6AM-12PM)';
+      else if (hour >= 12 && hour < 18) timeOfDay = 'Afternoon (12PM-6PM)';
+      else timeOfDay = 'Evening (6PM-12AM)';
+
+      if (!playtimeByTimeOfDay[row.game_name]) {
+        playtimeByTimeOfDay[row.game_name] = {
+          'Night (12AM-6AM)': 0,
+          'Morning (6AM-12PM)': 0,
+          'Afternoon (12PM-6PM)': 0,
+          'Evening (6PM-12AM)': 0
+        };
+      }
+
+      playtimeByTimeOfDay[row.game_name][timeOfDay] += parseFloat(row.total_playtime);
+    });
+
+    const processedResult = Object.entries(playtimeByTimeOfDay).flatMap(([game_name, timesOfDay]) =>
+      Object.entries(timesOfDay).map(([time_of_day, total_playtime]) => ({
+        game_name,
+        time_of_day,
+        total_playtime
+      }))
+    );
+
+    console.log('Playtime by time of day results:', processedResult);
+    return processedResult;
   } catch (err) {
     console.error('Error fetching playtime by time of day:', err);
     throw err;

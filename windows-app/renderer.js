@@ -567,15 +567,15 @@ document.getElementById('insights-tab').addEventListener('click', loadInsightsCo
 /// LOAD ABOUT CONTENT ///
 
 function loadAboutContent() {
-  const aboutContent = `
-      <h1>About Game Tracker</h1>
-      <p>Game Tracker is an Electron-based application designed to help gamers track their gaming sessions and analyze their playtime statistics.</p>
-      <h2>Developer Information</h2>
-      <p>Developed by [Your Name]</p>
-      <p>Email: [Your Email]</p>
-      <p>GitHub: <a href="[Your GitHub Profile]" target="_blank">[Your GitHub Profile]</a></p>
-  `;
-  document.getElementById('about-content').innerHTML = aboutContent;
+  fetch('about.html')
+  .then(response => response.text())
+  .then(html => {
+      document.getElementById('about-content').innerHTML = html;
+  })
+  .catch(error => {
+      console.error('Error loading about.html:', error);
+      document.getElementById('about-content').innerHTML = '<p>Error loading about content. Please try again later.</p>';
+  });
 }
 
 // Event listener for the About tab
