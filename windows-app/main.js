@@ -69,10 +69,18 @@ async function logGameStart(gameId) {
     // If there is no open session, create a new one with game details
     if (sessionResult.rows.length === 0) {
       const insertResult = await client.query(
-        "INSERT INTO sessions (game_id, game_name, exe_path, start_time) VALUES ($1, $2, $3, $4) RETURNING id",
+        `INSERT INTO sessions (game_id, game_name, exe_path, start_time) 
+         VALUES ($1, $2, $3, $4) 
+         ON CONFLICT (id) DO NOTHING 
+         RETURNING id`,
         [game.id, game.name, game.exe_path, startTime]
       );
-      console.log(`Game session started and logged with ID: ${insertResult.rows[0].id}`);
+      
+      if (insertResult.rows.length > 0) {
+        console.log(`Game session started and logged with ID: ${insertResult.rows[0].id}`);
+      } else {
+        console.log("Failed to insert new session. It may already exist.");
+      }
     } else {
       console.log("A session for this game is already running.");
     }
@@ -83,27 +91,80 @@ async function logGameStart(gameId) {
 }
 
 // Function to log the end of a game session
+async function logGameStart(gameId) {
+  const startTime = new Date().toISOString();
+
+  try {
+    // Get game details (name and exe_path) from the games table
+    const gameResult = await client.query("SELECT * FROM games WHERE id = $1", [gameId]);
+    const game = gameResult.rows[0];
+
+    if (!game) {
+      console.error(`No game found with id: ${gameId}`);
+      return;
+    }
+
+    // Check if there is already an open session (end_time is NULL) for this game
+    const sessionResult = await client.query("SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL", [gameId]);
+
+    // If there is no open session, create a new one with game details
+    if (sessionResult.rows.length === 0) {
+      const insertResult = await client.query(
+        `INSERT INTO sessions (game_id, game_name, exe_path, start_time) 
+         VALUES ($1, $2, $3, $4) 
+         ON CONFLICT (id) DO UPDATE 
+         SET game_id = EXCLUDED.game_id, 
+             game_name = EXCLUDED.game_name, 
+             exe_path = EXCLUDED.exe_path, 
+             start_time = EXCLUDED.start_time
+         RETURNING id`,
+        [game.id, game.name, game.exe_path, startTime]
+      );
+      
+      console.log(`Game session started and logged with ID: ${insertResult.rows[0].id}`);
+    } else {
+      console.log("A session for this game is already running.");
+    }
+  } catch (err) {
+    console.error("Error logging game start:", err);
+    console.error("Error details:", err.stack);
+  }
+}
+
 async function logGameEnd(gameId) {
   const endTime = new Date().toISOString();
 
   try {
-    // Get the start_time to calculate the duration
-    const sessionResult = await client.query("SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL", [gameId]);
+    // Find the open session for this game
+    const sessionResult = await client.query(
+      "SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL",
+      [gameId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      console.log(`No open session found for game with id: ${gameId}`);
+      return;
+    }
+
     const session = sessionResult.rows[0];
 
-    if (session) {
-      const startTime = new Date(session.start_time);
-      const endTimeObj = new Date(endTime);
+    // Calculate duration in minutes
+    const startTime = new Date(session.start_time);
+    const duration = Math.round((new Date(endTime) - startTime) / 60000);
 
-      // Calculate the duration in minutes
-      const duration = Math.floor((endTimeObj - startTime) / (1000 * 60)); // Convert milliseconds to minutes
+    // Update the session with end time and duration
+    const updateResult = await client.query(
+      `UPDATE sessions 
+       SET end_time = $1, duration = $2 
+       WHERE id = $3 
+       RETURNING id`,
+      [endTime, duration, session.id]
+    );
 
-      // Update the session to set the end time and duration
-      await client.query("UPDATE sessions SET end_time = $1, duration = $2 WHERE game_id = $3 AND end_time IS NULL", [endTime, duration, gameId]);
-      console.log(`Game stopped at ${endTime}. Duration: ${duration} minutes.`);
-    }
+    console.log(`Game session ended and logged with ID: ${updateResult.rows[0].id}`);
   } catch (err) {
     console.error("Error logging game end:", err);
+    console.error("Error details:", err.stack);
   }
 }
 
