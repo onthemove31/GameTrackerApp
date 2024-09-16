@@ -4,6 +4,9 @@ const { execFile } = require('child_process');
 const { Client } = require('pg');
 const dotenv = require('dotenv');
 const insights = require('./insights');
+const express = require('express');
+const session = require('express-session');
+const passport = require('./auth/auth');
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +27,14 @@ client.connect();
 async function initializeDatabase() {
   try {
     await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        steam_id TEXT,
+        xbox_id TEXT,
+        display_name TEXT
+      )
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS games (
         id SERIAL PRIMARY KEY,
         name TEXT,
@@ -33,6 +44,7 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sessions (
         id SERIAL PRIMARY KEY,
+        user_id INTEGER,
         game_id INTEGER,
         game_name TEXT,
         exe_path TEXT,
@@ -48,6 +60,44 @@ async function initializeDatabase() {
 }
 
 initializeDatabase();
+
+const expressApp = express();
+
+expressApp.use(session({
+    secret: 'your_secret_key',
+    resave: false,
+    saveUninitialized: false
+}));
+
+expressApp.use(passport.initialize());
+expressApp.use(passport.session());
+
+expressApp.get('/auth/steam', passport.authenticate('steam'));
+
+expressApp.get('/auth/steam/return', 
+    passport.authenticate('steam', { failureRedirect: '/' }),
+    (req, res) => {
+        res.redirect('/');
+    }
+);
+
+expressApp.get('/auth/xbox', passport.authenticate('xbox'));
+
+expressApp.get('/auth/xbox/callback', 
+    passport.authenticate('xbox', { failureRedirect: '/' }),
+    (req, res) => {
+        res.redirect('/');
+    }
+);
+
+expressApp.get('/logout', (req, res) => {
+    req.logout();
+    res.redirect('/');
+});
+
+expressApp.listen(3000, () => {
+    console.log('Express server listening on port 3000');
+});
 
 // Function to log the start of a game session
 async function logGameStart(gameId) {

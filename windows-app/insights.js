@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Load session data from the database
-async function loadSessionData() {
+async function loadSessionData(userId) {
   const client = new Client({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -16,8 +16,8 @@ async function loadSessionData() {
 
   try {
     await client.connect();
-    const query = "SELECT game_name, start_time, end_time FROM sessions";
-    const result = await client.query(query);
+    const query = "SELECT game_name, start_time, end_time FROM sessions WHERE user_id = $1";
+    const result = await client.query(query, [userId]);
     return result.rows;
   } catch (err) {
     console.error("Error executing query: ", err.message);

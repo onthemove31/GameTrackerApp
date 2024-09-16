@@ -48,7 +48,12 @@
     "electron-log": "^5.2.0",
     "electron-oauth2": "^3.0.0",
     "electron-store": "^10.0.0",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
     "node-powershell": "^5.0.1",
+    "passport": "^0.7.0",
+    "passport-microsoft": "^2.1.0",
+    "passport-steam": "^1.0.18",
     "pg": "^8.12.0",
     "sqlite3": "^5.1.7",
     "win-version-info": "^6.0.1"
