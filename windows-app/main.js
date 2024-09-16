@@ -22,24 +22,29 @@ client.connect();
 
 // Create the database structure if it doesn't exist
 async function initializeDatabase() {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS games (
-      id SERIAL PRIMARY KEY,
-      name TEXT,
-      exe_path TEXT
-    )
-  `);
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id SERIAL PRIMARY KEY,
-      game_id INTEGER,
-      game_name TEXT,
-      exe_path TEXT,
-      start_time TIMESTAMP,
-      end_time TIMESTAMP,
-      duration INTEGER
-    )
-  `);
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS games (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        exe_path TEXT
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id SERIAL PRIMARY KEY,
+        game_id INTEGER,
+        game_name TEXT,
+        exe_path TEXT,
+        start_time TIMESTAMP,
+        end_time TIMESTAMP,
+        duration INTEGER
+      )
+    `);
+    console.log("Database initialized successfully");
+  } catch (err) {
+    console.error("Error initializing database:", err);
+  }
 }
 
 initializeDatabase();
@@ -53,18 +58,27 @@ async function logGameStart(gameId) {
     const gameResult = await client.query("SELECT * FROM games WHERE id = $1", [gameId]);
     const game = gameResult.rows[0];
 
+    if (!game) {
+      console.error(`No game found with id: ${gameId}`);
+      return;
+    }
+
     // Check if there is already an open session (end_time is NULL) for this game
     const sessionResult = await client.query("SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL", [gameId]);
 
     // If there is no open session, create a new one with game details
     if (sessionResult.rows.length === 0) {
-      await client.query("INSERT INTO sessions (game_id, game_name, exe_path, start_time) VALUES ($1, $2, $3, $4)", [game.id, game.name, game.exe_path, startTime]);
-      console.log(`Game started at ${startTime} for ${game.name}`);
+      const insertResult = await client.query(
+        "INSERT INTO sessions (game_id, game_name, exe_path, start_time) VALUES ($1, $2, $3, $4) RETURNING id",
+        [game.id, game.name, game.exe_path, startTime]
+      );
+      console.log(`Game session started and logged with ID: ${insertResult.rows[0].id}`);
     } else {
       console.log("A session for this game is already running.");
     }
   } catch (err) {
     console.error("Error logging game start:", err);
+    console.error("Error details:", err.stack);
   }
 }
 
@@ -118,21 +132,25 @@ ipcMain.on('start-game', (event, game) => {
 
 // Function to check if any games are running
 async function checkForRunningGames() {
-  const psList = await import('ps-list'); // Dynamic import for ps-list
-  const processes = await psList.default(); // Access the default export
+  try {
+    const psList = await import('ps-list');
+    const processes = await psList.default();
 
-  const games = await getGames();
-  games.forEach(async (game) => {
-    const isGameRunning = processes.some((p) => p.name.toLowerCase() === path.basename(game.exe_path).toLowerCase());
+    const games = await getGames();
+    for (const game of games) {
+      const isGameRunning = processes.some((p) => p.name.toLowerCase() === path.basename(game.exe_path).toLowerCase());
 
-    if (isGameRunning && !gameStatus[game.id]) {
-      gameStatus[game.id] = true;
-      await onGameStart(game);
-    } else if (!isGameRunning && gameStatus[game.id]) {
-      gameStatus[game.id] = false;
-      await onGameStop(game);
+      if (isGameRunning && !gameStatus[game.id]) {
+        gameStatus[game.id] = true;
+        await onGameStart(game);
+      } else if (!isGameRunning && gameStatus[game.id]) {
+        gameStatus[game.id] = false;
+        await onGameStop(game);
+      }
     }
-  });
+  } catch (error) {
+    console.error("Error in checkForRunningGames:", error);
+  }
 }
 
 // Set an interval to check for running games every 5 seconds
