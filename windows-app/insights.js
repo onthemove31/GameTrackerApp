@@ -1,24 +1,30 @@
-const sqlite3 = require('sqlite3').verbose();
+const { Client } = require('pg');
+const dotenv = require('dotenv');
+
+// Load environment variables
+dotenv.config();
 
 // Load session data from the database
-function loadSessionData(dbPath, callback) {
-  let db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
-    if (err) {
-      console.error("Failed to open database: ", err.message);
-      return;
-    }
+async function loadSessionData() {
+  const client = new Client({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
   });
 
-  const query = "SELECT game_name, start_time, end_time FROM sessions";
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      console.error("Error executing query: ", err.message);
-      return;
-    }
-    callback(rows);
-  });
-
-  db.close();
+  try {
+    await client.connect();
+    const query = "SELECT game_name, start_time, end_time FROM sessions";
+    const result = await client.query(query);
+    return result.rows;
+  } catch (err) {
+    console.error("Error executing query: ", err.message);
+    throw err;
+  } finally {
+    await client.end();
+  }
 }
 
 // Helper function to calculate variance
@@ -30,11 +36,10 @@ function calculateVariance(durations) {
 
 // Helper function to convert 24-hour time to 12-hour format with AM/PM
 function convertTo12HourFormat(hour) {
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const adjustedHour = hour % 12 || 12; // Convert 0 to 12 for midnight, and adjust the hour
-    return `${adjustedHour} ${period}`;
-  }
-  
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const adjustedHour = hour % 12 || 12; // Convert 0 to 12 for midnight, and adjust the hour
+  return `${adjustedHour} ${period}`;
+}
 
 // Calculate all insights
 function calculateInsights(sessionData) {
@@ -153,7 +158,7 @@ function createFeedback(insights) {
   feedback.avgPlaytime = `On average, you play for ${Math.round(insights.averagePlaytimePerDay)} minutes per day.`;
 
   // Peak Play Hour
-  feedback.peakPlayHour = `You play the most during the hour of ${insights.peakPlayHour}:00.`;
+  feedback.peakPlayHour = `You play the most during the hour of ${convertTo12HourFormat(insights.peakPlayHour)}.`;
 
   // Weekend vs Weekday Playtime
   feedback.weekendPlaytime = `You've spent ${Math.round(insights.weekendPlaytime / 60)} hours gaming on weekends.`;
