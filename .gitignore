@@ -11,6 +11,7 @@ node_modules/
 # Ignore SQLite DB or logs if any
 *.db
 *.log
+*.sql
 
 package-lock.json
 windows-app/data_wrangler
