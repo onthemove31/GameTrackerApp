@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const insights = require('./insights');
 const express = require('express');
 const session = require('express-session');
-const passport = require('./auth/auth');
+const passport = require('./auth/auth'); // Corrected path
 
 // Load environment variables
 dotenv.config();
@@ -30,7 +30,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         steam_id TEXT,
-        xbox_id TEXT,
+        microsoft_id TEXT,
         display_name TEXT
       )
     `);
@@ -81,10 +81,10 @@ expressApp.get('/auth/steam/return',
     }
 );
 
-expressApp.get('/auth/xbox', passport.authenticate('xbox'));
+expressApp.get('/auth/microsoft', passport.authenticate('microsoft'));
 
-expressApp.get('/auth/xbox/callback', 
-    passport.authenticate('xbox', { failureRedirect: '/' }),
+expressApp.get('/auth/microsoft/callback', 
+    passport.authenticate('microsoft', { failureRedirect: '/' }),
     (req, res) => {
         res.redirect('/');
     }
@@ -100,7 +100,7 @@ expressApp.listen(3000, () => {
 });
 
 // Function to log the start of a game session
-async function logGameStart(gameId) {
+async function logGameStart(userId, gameId) {
   const startTime = new Date().toISOString();
 
   try {
@@ -114,16 +114,16 @@ async function logGameStart(gameId) {
     }
 
     // Check if there is already an open session (end_time is NULL) for this game
-    const sessionResult = await client.query("SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL", [gameId]);
+    const sessionResult = await client.query("SELECT * FROM sessions WHERE user_id = $1 AND game_id = $2 AND end_time IS NULL", [userId, gameId]);
 
     // If there is no open session, create a new one with game details
     if (sessionResult.rows.length === 0) {
       const insertResult = await client.query(
-        `INSERT INTO sessions (game_id, game_name, exe_path, start_time) 
-         VALUES ($1, $2, $3, $4) 
+        `INSERT INTO sessions (user_id, game_id, game_name, exe_path, start_time) 
+         VALUES ($1, $2, $3, $4, $5) 
          ON CONFLICT (id) DO NOTHING 
          RETURNING id`,
-        [game.id, game.name, game.exe_path, startTime]
+        [userId, game.id, game.name, game.exe_path, startTime]
       );
       
       if (insertResult.rows.length > 0) {
@@ -141,54 +141,14 @@ async function logGameStart(gameId) {
 }
 
 // Function to log the end of a game session
-async function logGameStart(gameId) {
-  const startTime = new Date().toISOString();
-
-  try {
-    // Get game details (name and exe_path) from the games table
-    const gameResult = await client.query("SELECT * FROM games WHERE id = $1", [gameId]);
-    const game = gameResult.rows[0];
-
-    if (!game) {
-      console.error(`No game found with id: ${gameId}`);
-      return;
-    }
-
-    // Check if there is already an open session (end_time is NULL) for this game
-    const sessionResult = await client.query("SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL", [gameId]);
-
-    // If there is no open session, create a new one with game details
-    if (sessionResult.rows.length === 0) {
-      const insertResult = await client.query(
-        `INSERT INTO sessions (game_id, game_name, exe_path, start_time) 
-         VALUES ($1, $2, $3, $4) 
-         ON CONFLICT (id) DO UPDATE 
-         SET game_id = EXCLUDED.game_id, 
-             game_name = EXCLUDED.game_name, 
-             exe_path = EXCLUDED.exe_path, 
-             start_time = EXCLUDED.start_time
-         RETURNING id`,
-        [game.id, game.name, game.exe_path, startTime]
-      );
-      
-      console.log(`Game session started and logged with ID: ${insertResult.rows[0].id}`);
-    } else {
-      console.log("A session for this game is already running.");
-    }
-  } catch (err) {
-    console.error("Error logging game start:", err);
-    console.error("Error details:", err.stack);
-  }
-}
-
-async function logGameEnd(gameId) {
+async function logGameEnd(userId, gameId) {
   const endTime = new Date().toISOString();
 
   try {
     // Find the open session for this game
     const sessionResult = await client.query(
-      "SELECT * FROM sessions WHERE game_id = $1 AND end_time IS NULL",
-      [gameId]
+      "SELECT * FROM sessions WHERE user_id = $1 AND game_id = $2 AND end_time IS NULL",
+      [userId, gameId]
     );
 
     if (sessionResult.rows.length === 0) {
@@ -230,19 +190,20 @@ async function getGames() {
 }
 
 // Handle starting the game via button click
-ipcMain.on('start-game', (event, game) => {
+ipcMain.on('start-game', (event, { userId, game }) => {
   execFile(game.exe_path, (err) => {
     if (err) {
       console.error(`Error launching ${game.name}:`, err);
     } else {
       console.log(`${game.name} has started`);
       event.sender.send('game-status-update', { gameId: game.id, status: 'Running' });
+      logGameStart(userId, game.id);
     }
   });
 });
 
 // Function to check if any games are running
-async function checkForRunningGames() {
+async function checkForRunningGames(userId) {
   try {
     const psList = await import('ps-list');
     const processes = await psList.default();
@@ -253,10 +214,10 @@ async function checkForRunningGames() {
 
       if (isGameRunning && !gameStatus[game.id]) {
         gameStatus[game.id] = true;
-        await onGameStart(game);
+        await onGameStart(userId, game);
       } else if (!isGameRunning && gameStatus[game.id]) {
         gameStatus[game.id] = false;
-        await onGameStop(game);
+        await onGameStop(userId, game);
       }
     }
   } catch (error) {
@@ -265,10 +226,15 @@ async function checkForRunningGames() {
 }
 
 // Set an interval to check for running games every 5 seconds
-setInterval(checkForRunningGames, 5000);
+setInterval(() => {
+  if (currentUser) {
+    checkForRunningGames(currentUser.id);
+  }
+}, 5000);
 
 let mainWindow;
 let gameStatus = {};
+let currentUser = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -276,19 +242,19 @@ function createWindow() {
     height: 900,
     icon: path.join(__dirname, 'assets', 'icons', 'app-icon.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'renderer.js'),
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
       contextIsolation: false
     }
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile('auth.html');
 }
 
 // Handle the 'get-insights' event from the renderer
 ipcMain.handle('get-insights', async (event) => {
   try {
-    const sessionData = await insights.loadSessionData();
+    const sessionData = await insights.loadSessionData(currentUser.id);
     const calculatedInsights = insights.calculateInsights(sessionData);
     const feedback = insights.createFeedback(calculatedInsights);
     return feedback;
@@ -302,6 +268,12 @@ app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
 
 // Handle file dialog for browsing executables
@@ -339,9 +311,9 @@ ipcMain.handle('get-session-history', async (event, { gameName, startDate, endDa
     let query = `
       SELECT game_name, start_time, end_time, duration
       FROM sessions
-      WHERE 1=1
+      WHERE user_id = $1
     `;
-    const params = [];
+    const params = [currentUser.id];
 
     if (gameName) {
       query += ` AND game_name LIKE $${params.length + 1}`;
@@ -375,10 +347,10 @@ ipcMain.handle('get-total-time-per-game', async () => {
     const query = `
       SELECT game_name, SUM(duration) as total_duration
       FROM sessions
-      WHERE duration IS NOT NULL
+      WHERE user_id = $1 AND duration IS NOT NULL
       GROUP BY game_name
     `;
-    const result = await client.query(query);
+    const result = await client.query(query, [currentUser.id]);
     return result.rows;
   } catch (err) {
     console.error("Error calculating total time per game:", err);
@@ -390,11 +362,11 @@ async function getLastSessionDuration(gameId) {
   try {
     const query = `
       SELECT duration FROM sessions
-      WHERE game_id = $1
+      WHERE user_id = $1 AND game_id = $2
       ORDER BY end_time DESC
       LIMIT 1
     `;
-    const result = await client.query(query, [gameId]);
+    const result = await client.query(query, [currentUser.id, gameId]);
     return result.rows[0] ? result.rows[0].duration : 0;
   } catch (err) {
     console.error("Error fetching last session duration:", err);
@@ -421,10 +393,10 @@ function stopLiveSessionTimer(gameId) {
   clearInterval(liveSessionTimers[gameId]);
 }
 
-async function onGameStart(game) {
+async function onGameStart(userId, game) {
   console.log('Game Started:', game);
   const now = new Date();
-  await logGameStart(game.id, game.name);
+  await logGameStart(userId, game.id, game.name);
   startLiveSessionTimer(game.id, now);
   
   mainWindow.webContents.send('game-status-update', {
@@ -435,9 +407,9 @@ async function onGameStart(game) {
   });
 }
 
-async function onGameStop(game) {
+async function onGameStop(userId, game) {
   console.log('Game Stopped:', game);
-  await logGameEnd(game.id); 
+  await logGameEnd(userId, game.id); 
   stopLiveSessionTimer(game.id);
   
   mainWindow.webContents.send('game-status-update', {
@@ -452,9 +424,10 @@ ipcMain.handle('get-unique-game-names', async () => {
   try {
     const query = `
       SELECT DISTINCT game_name FROM sessions
+      WHERE user_id = $1
       ORDER BY game_name
     `;
-    const result = await client.query(query);
+    const result = await client.query(query, [currentUser.id]);
     return result.rows;
   } catch (err) {
     console.error('Error fetching unique game names:', err);
@@ -466,7 +439,7 @@ ipcMain.handle('get-unique-game-names', async () => {
 
 function addFiltersToQuery(query, filters = {}) {
   const conditions = [];
-  const params = [];
+  const params = [currentUser.id];
 
   console.log('Adding filters:', JSON.stringify(filters, null, 2));
 
@@ -484,7 +457,7 @@ function addFiltersToQuery(query, filters = {}) {
   }
 
   if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
+    query += ' AND ' + conditions.join(' AND ');
   }
 
   console.log('Final query before GROUP BY:', query);
@@ -499,6 +472,7 @@ ipcMain.handle('get-total-playtime-per-game', async (event, filters) => {
     let query = `
       SELECT game_name, SUM(duration) as total_playtime
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -522,6 +496,7 @@ ipcMain.handle('get-average-session-duration-per-game', async (event, filters) =
     let query = `
       SELECT game_name, AVG(duration) as avg_session_duration
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -545,6 +520,7 @@ ipcMain.handle('get-longest-play-session-per-game', async (event, filters) => {
     let query = `
       SELECT game_name, MAX(duration) as longest_session
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -568,6 +544,7 @@ ipcMain.handle('get-playtime-over-time', async (event, filters) => {
     let query = `
       SELECT date(start_time) as play_date, SUM(duration) as total_playtime
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -591,6 +568,7 @@ ipcMain.handle('get-sessions-per-game', async (event, filters) => {
     let query = `
       SELECT game_name, COUNT(*) as session_count
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -615,6 +593,7 @@ ipcMain.handle('get-time-played-per-day', async (event, filters) => {
       SELECT EXTRACT(DOW FROM start_time) as day_of_week, 
              SUM(duration) as total_playtime
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
@@ -651,6 +630,7 @@ ipcMain.handle('get-playtime-by-time-of-day', async (event, filters) => {
         END as time_of_day,
         SUM(duration) as total_playtime
       FROM sessions
+      WHERE user_id = $1
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);

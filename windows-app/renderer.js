@@ -7,6 +7,9 @@ const browseBtn = document.getElementById('browse-btn');
 const addGameBtn = document.getElementById('add-game-btn');
 const gamesList = document.getElementById('games-list');
 const gameStatusList = document.getElementById('game-status-list');
+const signInSteamBtn = document.getElementById('sign-in-steam-btn');
+const signInMicrosoftBtn = document.getElementById('sign-in-microsoft-btn');
+const signOutBtn = document.getElementById('sign-out-btn');
 
 let currentStatsFilters = {
   gameName: '',
@@ -32,69 +35,69 @@ function initializeFilters() {
 
 // Open file dialog to browse for the game executable
 browseBtn.addEventListener('click', () => {
-    ipcRenderer.invoke('open-file-dialog').then(result => {
-        if (!result.canceled) {
-            exePathInput.value = result.filePaths[0];
-        }
-    });
+  ipcRenderer.invoke('open-file-dialog').then(result => {
+    if (!result.canceled) {
+      exePathInput.value = result.filePaths[0];
+    }
+  });
 });
 
 // Add game to the list
 addGameBtn.addEventListener('click', () => {
-    const gameName = gameNameInput.value;
-    const exePath = exePathInput.value;
+  const gameName = gameNameInput.value;
+  const exePath = exePathInput.value;
 
-    if (gameName && exePath) {
-        ipcRenderer.send('add-game', { name: gameName, exePath: exePath });
-        loadGames();
-    } else {
-        alert('Please enter both a game name and an executable path.');
-    }
+  if (gameName && exePath) {
+    ipcRenderer.send('add-game', { name: gameName, exePath: exePath });
+    loadGames();
+  } else {
+    alert('Please enter both a game name and an executable path.');
+  }
 });
 
 // Load games from the database and display them
 function loadGames() {
-    ipcRenderer.invoke('get-games').then(games => {
-        gamesList.innerHTML = '';
-        gameStatusList.innerHTML = '';
-        games.forEach(game => {
-            // Create list item for each game
-            const listItem = document.createElement('li');
-            listItem.textContent = `${game.name} (${game.exe_path})`;
+  ipcRenderer.invoke('get-games').then(games => {
+    gamesList.innerHTML = '';
+    gameStatusList.innerHTML = '';
+    games.forEach(game => {
+      // Create list item for each game
+      const listItem = document.createElement('li');
+      listItem.textContent = `${game.name} (${game.exe_path})`;
 
-            // Add a "Start Game" button for each game
-            const startButton = document.createElement('button');
-            startButton.textContent = 'Start Game';
-            startButton.id = `start-${game.id}`;
-            startButton.addEventListener('click', () => {
-                ipcRenderer.send('start-game', game);
-                startButton.disabled = true; // Disable the button when game starts
-            });
+      // Add a "Start Game" button for each game
+      const startButton = document.createElement('button');
+      startButton.textContent = 'Start Game';
+      startButton.id = `start-${game.id}`;
+      startButton.addEventListener('click', () => {
+        ipcRenderer.send('start-game', { userId: currentUser.id, game });
+        startButton.disabled = true; // Disable the button when game starts
+      });
 
-            listItem.appendChild(startButton);
-            gamesList.appendChild(listItem);
+      listItem.appendChild(startButton);
+      gamesList.appendChild(listItem);
 
-            // Add the game status
-            const statusItem = document.createElement('li');
-            statusItem.id = `status-${game.id}`;
-            statusItem.textContent = `${game.name}: Stopped`;
-            gameStatusList.appendChild(statusItem);
-        });
+      // Add the game status
+      const statusItem = document.createElement('li');
+      statusItem.id = `status-${game.id}`;
+      statusItem.textContent = `${game.name}: Stopped`;
+      gameStatusList.appendChild(statusItem);
     });
+  });
 }
 
 // Update game status in the UI and re-enable the button when game stops
 ipcRenderer.on('game-status-update', (event, { gameId, status }) => {
-    const statusItem = document.getElementById(`status-${gameId}`);
-    const startButton = document.getElementById(`start-${gameId}`);
+  const statusItem = document.getElementById(`status-${gameId}`);
+  const startButton = document.getElementById(`start-${gameId}`);
 
-    if (statusItem) {
-        statusItem.textContent = `${statusItem.textContent.split(':')[0]}: ${status}`;
-    }
+  if (statusItem) {
+    statusItem.textContent = `${statusItem.textContent.split(':')[0]}: ${status}`;
+  }
 
-    if (status === 'Stopped' && startButton) {
-        startButton.disabled = false; // Re-enable the button when game stops
-    }
+  if (status === 'Stopped' && startButton) {
+    startButton.disabled = false; // Re-enable the button when game stops
+  }
 });
 
 loadGames();
@@ -130,65 +133,65 @@ statsTab.addEventListener('click', () => switchTab(statsTab, statsContent));
 
 // Load Game Statistics
 async function loadStatistics() {
-    try {
-        // Total Playtime Per Game
-        console.log('Sending filters for total playtime:', JSON.stringify(currentStatsFilters, null, 2));
-        let totalPlaytimeData = await ipcRenderer.invoke('get-total-playtime-per-game', currentStatsFilters);
-        console.log('Received total playtime data:', totalPlaytimeData);
-        createChart('total-playtime-chart', 'Total Playtime (hours)', totalPlaytimeData, 'bar', 'total_playtime');
+  try {
+    // Total Playtime Per Game
+    console.log('Sending filters for total playtime:', JSON.stringify(currentStatsFilters, null, 2));
+    let totalPlaytimeData = await ipcRenderer.invoke('get-total-playtime-per-game', currentStatsFilters);
+    console.log('Received total playtime data:', totalPlaytimeData);
+    createChart('total-playtime-chart', 'Total Playtime (hours)', totalPlaytimeData, 'bar', 'total_playtime');
 
-        // Average Session Duration Per Game
-        console.log('Sending filters for average session duration:', JSON.stringify(currentStatsFilters, null, 2));
-        let avgSessionData = await ipcRenderer.invoke('get-average-session-duration-per-game', currentStatsFilters);
-        console.log('Received average session duration data:', avgSessionData);
-        createChart('avg-session-duration-chart', 'Average Session Duration (hours)', avgSessionData, 'bar', 'avg_session_duration');
+    // Average Session Duration Per Game
+    console.log('Sending filters for average session duration:', JSON.stringify(currentStatsFilters, null, 2));
+    let avgSessionData = await ipcRenderer.invoke('get-average-session-duration-per-game', currentStatsFilters);
+    console.log('Received average session duration data:', avgSessionData);
+    createChart('avg-session-duration-chart', 'Average Session Duration (hours)', avgSessionData, 'bar', 'avg_session_duration');
 
-        // Longest Play Session Per Game
-        console.log('Sending filters for longest play session:', JSON.stringify(currentStatsFilters, null, 2));
-        let longestSessionData = await ipcRenderer.invoke('get-longest-play-session-per-game', currentStatsFilters);
-        console.log('Received longest play session data:', longestSessionData);
-        createChart('longest-session-chart', 'Longest Play Session (hours)', longestSessionData, 'bar', 'longest_session');
+    // Longest Play Session Per Game
+    console.log('Sending filters for longest play session:', JSON.stringify(currentStatsFilters, null, 2));
+    let longestSessionData = await ipcRenderer.invoke('get-longest-play-session-per-game', currentStatsFilters);
+    console.log('Received longest play session data:', longestSessionData);
+    createChart('longest-session-chart', 'Longest Play Session (hours)', longestSessionData, 'bar', 'longest_session');
 
-        // Playtime Over Time (Daily)
-        console.log('Sending filters for playtime over time:', JSON.stringify(currentStatsFilters, null, 2));
-        let playtimeOverTimeData = await ipcRenderer.invoke('get-playtime-over-time', currentStatsFilters);
-        console.log('Received playtime over time data:', playtimeOverTimeData);
-        createTimeSeriesChart('playtime-over-time-chart', 'Daily Playtime', playtimeOverTimeData);
+    // Playtime Over Time (Daily)
+    console.log('Sending filters for playtime over time:', JSON.stringify(currentStatsFilters, null, 2));
+    let playtimeOverTimeData = await ipcRenderer.invoke('get-playtime-over-time', currentStatsFilters);
+    console.log('Received playtime over time data:', playtimeOverTimeData);
+    createTimeSeriesChart('playtime-over-time-chart', 'Daily Playtime', playtimeOverTimeData);
 
-        // Number of Sessions Per Game
-        console.log('Sending filters for sessions per game:', JSON.stringify(currentStatsFilters, null, 2));
-        let sessionsPerGameData = await ipcRenderer.invoke('get-sessions-per-game', currentStatsFilters);
-        console.log('Received sessions per game data:', sessionsPerGameData);
-        createChart('session-count-chart', 'Number of Sessions', sessionsPerGameData, 'bar', 'session_count');
+    // Number of Sessions Per Game
+    console.log('Sending filters for sessions per game:', JSON.stringify(currentStatsFilters, null, 2));
+    let sessionsPerGameData = await ipcRenderer.invoke('get-sessions-per-game', currentStatsFilters);
+    console.log('Received sessions per game data:', sessionsPerGameData);
+    createChart('session-count-chart', 'Number of Sessions', sessionsPerGameData, 'bar', 'session_count');
 
-        // Time Played Per Day
-        console.log('Sending filters for time played per day:', JSON.stringify(currentStatsFilters, null, 2));
-        let timePlayedPerDayData = await ipcRenderer.invoke('get-time-played-per-day', currentStatsFilters);
-        console.log('Received time played per day data:', timePlayedPerDayData);
-        createChart('time-played-per-day-chart', 'Total Playtime (hours)', timePlayedPerDayData, 'bar', 'total_playtime', 'day_of_week');
+    // Time Played Per Day
+    console.log('Sending filters for time played per day:', JSON.stringify(currentStatsFilters, null, 2));
+    let timePlayedPerDayData = await ipcRenderer.invoke('get-time-played-per-day', currentStatsFilters);
+    console.log('Received time played per day data:', timePlayedPerDayData);
+    createChart('time-played-per-day-chart', 'Total Playtime (hours)', timePlayedPerDayData, 'bar', 'total_playtime', 'day_of_week');
 
-        // Playtime Distribution By Time of Day
-        console.log('Sending filters for playtime by time of day:', JSON.stringify(currentStatsFilters, null, 2));
-        let timeOfDayData = await ipcRenderer.invoke('get-playtime-by-time-of-day', currentStatsFilters);
-        console.log('Received playtime by time of day data:', timeOfDayData);
-        createStackedHorizontalBarChart('playtime-by-time-of-day-chart', 'Playtime Distribution By Time of Day', timeOfDayData);
-    } catch (error) {
-        console.error('Error loading statistics:', error);
-        // Optionally, display an error message to the user
-    }
+    // Playtime Distribution By Time of Day
+    console.log('Sending filters for playtime by time of day:', JSON.stringify(currentStatsFilters, null, 2));
+    let timeOfDayData = await ipcRenderer.invoke('get-playtime-by-time-of-day', currentStatsFilters);
+    console.log('Received playtime by time of day data:', timeOfDayData);
+    createStackedHorizontalBarChart('playtime-by-time-of-day-chart', 'Playtime Distribution By Time of Day', timeOfDayData);
+  } catch (error) {
+    console.error('Error loading statistics:', error);
+    // Optionally, display an error message to the user
+  }
 }
 
 function populateStatsGameNameDropdown() {
-    const dropdown = document.getElementById('stats-filter-game-name');
-    ipcRenderer.invoke('get-unique-game-names').then((games) => {
-        dropdown.innerHTML = '<option value="">All Games</option>';
-        games.forEach((game) => {
-            const option = document.createElement('option');
-            option.value = game.game_name;
-            option.textContent = game.game_name;
-            dropdown.appendChild(option);
-        });
+  const dropdown = document.getElementById('stats-filter-game-name');
+  ipcRenderer.invoke('get-unique-game-names').then((games) => {
+    dropdown.innerHTML = '<option value="">All Games</option>';
+    games.forEach((game) => {
+      const option = document.createElement('option');
+      option.value = game.game_name;
+      option.textContent = game.game_name;
+      dropdown.appendChild(option);
     });
+  });
 }
 
 document.getElementById('stats-apply-filters-btn').addEventListener('click', () => {
@@ -201,239 +204,342 @@ document.getElementById('stats-apply-filters-btn').addEventListener('click', () 
 
 // Modify the existing stats tab click event listener
 document.getElementById('stats-tab').addEventListener('click', () => {
-    switchTab(statsTab, statsContent);
-    initializeFilters();  // Reset filters to default
-    loadStatistics();     // Load all data
+  switchTab(statsTab, statsContent);
+  initializeFilters();  // Reset filters to default
+  loadStatistics();     // Load all data
 });
 
 // Function to populate the game name dropdown with unique game names
 function populateGameNameDropdown() {
-    ipcRenderer.invoke('get-unique-game-names').then((gameNames) => {
-      const gameNameDropdown = document.getElementById('filter-game-name');
-  
-      // Clear existing options
-      gameNameDropdown.innerHTML = '<option value="">All Games</option>';
-  
-      // Add the unique game names as options
-      gameNames.forEach((game) => {
-        const option = document.createElement('option');
-        option.value = game.game_name;
-        option.textContent = game.game_name;
-        gameNameDropdown.appendChild(option);
-      });
-      gameNameDropdown.addEventListener('change', () => {
-        const selectedGameName = gameNameDropdown.value;
-        loadSessionHistory(selectedGameName);  // Pass the selected game name to loadSessionHistory
-      });
+  ipcRenderer.invoke('get-unique-game-names').then((gameNames) => {
+    const gameNameDropdown = document.getElementById('filter-game-name');
+
+    // Clear existing options
+    gameNameDropdown.innerHTML = '<option value="">All Games</option>';
+
+    // Add the unique game names as options
+    gameNames.forEach((game) => {
+      const option = document.createElement('option');
+      option.value = game.game_name;
+      option.textContent = game.game_name;
+      gameNameDropdown.appendChild(option);
     });
-  }
-  
-  // Function to load session history from the database, with optional filters
-  function loadSessionHistory(gameName = '', startDate = '', endDate = '') {
-    ipcRenderer.invoke('get-session-history', { gameName, startDate, endDate }).then((sessions) => {
-      const sessionTable = document.getElementById('session-history');
-  
-      // Clear existing session history
-      sessionTable.innerHTML = `
-        <tr>
-          <th>Game Name</th>
-          <th>Start Time</th>
-          <th>End Time</th>
-          <th>Duration (hours)</th>
-        </tr>
-      `;
-  
-      sessions.forEach((session) => {
-        const row = document.createElement('tr');
-  
-        const gameNameCell = document.createElement('td');
-        gameNameCell.textContent = session.game_name;
-  
-        const startTimeCell = document.createElement('td');
-        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
-  
-        const endTimeCell = document.createElement('td');
-        endTimeCell.textContent = session.end_time
-          ? new Date(session.end_time).toLocaleString()
-          : 'In Progress';
-  
-        const durationCell = document.createElement('td');
-        if (session.duration !== null && !isNaN(session.duration)) {
-          const durationHours = (session.duration / 60).toFixed(2);
-          durationCell.textContent = `${durationHours} hours`;
-        } else {
-          durationCell.textContent = session.end_time ? 'Calculating...' : 'In Progress';
-        }
-  
-        row.appendChild(gameNameCell);
-        row.appendChild(startTimeCell);
-        row.appendChild(endTimeCell);
-        row.appendChild(durationCell);
-  
-        sessionTable.appendChild(row);
-      });
+    gameNameDropdown.addEventListener('change', () => {
+      const selectedGameName = gameNameDropdown.value;
+      loadSessionHistory(selectedGameName);  // Pass the selected game name to loadSessionHistory
     });
-  }
-  
-  // Event listener for the Refresh button
-  document.getElementById('refresh-btn').addEventListener('click', () => {
-    // Call loadSessionHistory with no filters to refresh the full table
-    loadSessionHistory();
   });
-  
-  // Event listener for the Apply Filters button
-  document.getElementById('apply-filters-btn').addEventListener('click', () => {
-    const gameName = document.getElementById('filter-game-name').value;
-    const startDate = document.getElementById('filter-start-date').value;
-    const endDate = document.getElementById('filter-end-date').value;
-  
-    // Call loadSessionHistory with the filters applied
-    loadSessionHistory(gameName, startDate, endDate);
+}
+
+// Function to load session history from the database, with optional filters
+function loadSessionHistory(gameName = '', startDate = '', endDate = '') {
+  ipcRenderer.invoke('get-session-history', { gameName, startDate, endDate }).then((sessions) => {
+    const sessionTable = document.getElementById('session-history');
+
+    // Clear existing session history
+    sessionTable.innerHTML = `
+      <tr>
+        <th>Game Name</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Duration (hours)</th>
+      </tr>
+    `;
+
+    sessions.forEach((session) => {
+      const row = document.createElement('tr');
+
+      const gameNameCell = document.createElement('td');
+      gameNameCell.textContent = session.game_name;
+
+      const startTimeCell = document.createElement('td');
+      startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+
+      const endTimeCell = document.createElement('td');
+      endTimeCell.textContent = session.end_time
+        ? new Date(session.end_time).toLocaleString()
+        : 'In Progress';
+
+      const durationCell = document.createElement('td');
+      if (session.duration !== null && !isNaN(session.duration)) {
+        const durationHours = (session.duration / 60).toFixed(2);
+        durationCell.textContent = `${durationHours} hours`;
+      } else {
+        durationCell.textContent = session.end_time ? 'Calculating...' : 'In Progress';
+      }
+
+      row.appendChild(gameNameCell);
+      row.appendChild(startTimeCell);
+      row.appendChild(endTimeCell);
+      row.appendChild(durationCell);
+
+      sessionTable.appendChild(row);
+    });
   });
-  
-  // Populate the game name dropdown on app start
-  populateGameNameDropdown();
-  
-  // Load session history on app start
+}
+
+// Event listener for the Apply Filters button
+document.getElementById('apply-filters-btn').addEventListener('click', () => {
+  const gameName = document.getElementById('filter-game-name').value;
+  const startDate = document.getElementById('filter-start-date').value;
+  const endDate = document.getElementById('filter-end-date').value;
+  loadSessionHistory(gameName, startDate, endDate);
+});
+
+// Event listener for the Refresh button
+document.getElementById('refresh-btn').addEventListener('click', () => {
   loadSessionHistory();
-  
-  function createChart(chartId, label, data, type, dataKey, labelKey = 'game_name') {
-    if (!data || data.length === 0) {
-        console.log(`No data available for chart: ${chartId}`);
-        return;
-    }
+});
 
-    const ctx = document.getElementById(chartId).getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.myCharts && window.myCharts[chartId]) {
-        window.myCharts[chartId].destroy();
-    }
+// Sign in with Steam
+signInSteamBtn.addEventListener('click', () => {
+  window.location.href = 'http://localhost:3000/auth/steam';
+});
 
-    // Convert minutes to hours
-    const hoursData = data.map(item => ({
-        ...item,
-        [dataKey]: item[dataKey] / 60
-        
-    }));
+// Sign in with Microsoft
+signInMicrosoftBtn.addEventListener('click', () => {
+  window.location.href = 'http://localhost:3000/auth/microsoft';
+});
 
-    // Create new chart
-    window.myCharts = window.myCharts || {};
-    window.myCharts[chartId] = new Chart(ctx, {
-        type: type,
-        data: {
-            labels: hoursData.map(item => item[labelKey]),
-            datasets: [{
-                label: label,
-                data: hoursData.map(item => item[dataKey]),
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Hours'
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(2) + ' hours';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+// Sign out
+signOutBtn.addEventListener('click', () => {
+  window.location.href = 'http://localhost:3000/logout';
+});
+
+// Load initial data
+loadSessionHistory();
+populateGameNameDropdown();
+initializeFilters();
+loadStatistics();
+
+function createChart(chartId, label, data, type, dataKey, labelKey = 'game_name') {
+  if (!data || data.length === 0) {
+    console.log(`No data available for chart: ${chartId}`);
+    return;
   }
-  
-  function createTimeSeriesChart(chartId, label, data) {
-    const ctx = document.getElementById(chartId).getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.myCharts && window.myCharts[chartId]) {
-        window.myCharts[chartId].destroy();
-    }
 
-    // Convert minutes to hours
-    const hoursData = data.map(item => ({
-        ...item,
-        total_playtime: item.total_playtime / 60
-    }));
+  const ctx = document.getElementById(chartId).getContext('2d');
 
-    window.myCharts = window.myCharts || {};
-    window.myCharts[chartId] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: hoursData.map(item => item.play_date),
-            datasets: [{
-                label: label,
-                data: hoursData.map(item => item.total_playtime),
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day',
-                        displayFormats: {
-                            day: 'MMM d'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Date'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Playtime (hours)'
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(2) + ' hours';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+  // Destroy existing chart if it exists
+  if (window.myCharts && window.myCharts[chartId]) {
+    window.myCharts[chartId].destroy();
   }
+
+  // Convert minutes to hours
+  const hoursData = data.map(item => ({
+    ...item,
+    [dataKey]: item[dataKey] / 60
+  }));
+
+  // Create new chart
+  window.myCharts = window.myCharts || {};
+  window.myCharts[chartId] = new Chart(ctx, {
+    type: type,
+    data: {
+      labels: hoursData.map(item => item[labelKey]),
+      datasets: [{
+        label: label,
+        data: hoursData.map(item => item[dataKey]),
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Hours'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(2) + ' hours';
+              }
+              return label;
+            }
+          }
+        }
+      },
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function createTimeSeriesChart(chartId, label, data) {
+  const ctx = document.getElementById(chartId).getContext('2d');
+
+  // Destroy existing chart if it exists
+  if (window.myCharts && window.myCharts[chartId]) {
+    window.myCharts[chartId].destroy();
+  }
+
+  // Convert minutes to hours
+  const hoursData = data.map(item => ({
+    ...item,
+    total_playtime: item.total_playtime / 60
+  }));
+
+  window.myCharts = window.myCharts || {};
+  window.myCharts[chartId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hoursData.map(item => item.play_date),
+      datasets: [{
+        label: label,
+        data: hoursData.map(item => item.total_playtime),
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'MMM d'
+            }
+          },
+          title: {
+            display: true,
+            text: 'Date'
+          }
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Playtime (hours)'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(2) + ' hours';
+              }
+              return label;
+            }
+          }
+        }
+      },
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function createStackedHorizontalBarChart(chartId, label, data) {
+  const ctx = document.getElementById(chartId).getContext('2d');
+
+  // Destroy existing chart if it exists
+  if (window.myCharts && window.myCharts[chartId]) {
+    window.myCharts[chartId].destroy();
+  }
+
+  // Convert minutes to hours
+  const hoursData = data.map(item => ({
+    ...item,
+    total_playtime: item.total_playtime / 60
+  }));
+
+  // Group data by game_name
+  const groupedData = hoursData.reduce((acc, item) => {
+    const gameName = item.game_name;
+    if (!acc[gameName]) {
+      acc[gameName] = [];
+    }
+    acc[gameName].push(item);
+    return acc;
+  }, {});
+
+  // Create datasets for each time_of_day
+  const datasets = [];
+  const timeOfDayOrder = ['Night (12AM-6AM)', 'Morning (6AM-12PM)', 'Afternoon (12PM-6PM)', 'Evening (6PM-12AM)'];
+  timeOfDayOrder.forEach(timeOfDay => {
+    const dataForTimeOfDay = Object.values(groupedData).map(gameData => {
+      const item = gameData.find(item => item.time_of_day === timeOfDay);
+      return item ? item.total_playtime : 0;
+    });
+    datasets.push({
+      label: timeOfDay,
+      data: dataForTimeOfDay,
+      backgroundColor: getRandomColor()
+    });
+  });
+
+  window.myCharts = window.myCharts || {};
+  window.myCharts[chartId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(groupedData),
+      datasets: datasets
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          stacked: true,
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Playtime (hours)'
+          }
+        },
+        y: {
+          stacked: true
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.x !== null) {
+                label += context.parsed.x.toFixed(2) + ' hours';
+              }
+              return label;
+            }
+          }
+        }
+      },
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
 
   function createStackedHorizontalBarChart(chartId, label, data) {
     const ctx = document.getElementById(chartId).getContext('2d');
