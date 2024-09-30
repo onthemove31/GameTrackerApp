@@ -266,9 +266,12 @@ ipcMain.handle('open-file-dialog', async () => {
 // Function to add a game to the database
 ipcMain.on('add-game', async (event, game) => {
   try {
+    // Ensure the query does not include the id column
     await client.query("INSERT INTO games (name, exe_path) VALUES ($1, $2)", [game.name, game.exePath]);
+    console.log(`Game added: ${game.name}`);
   } catch (err) {
     console.error("Error adding game:", err);
+    event.reply('add-game-response', { success: false, error: err.message });
   }
 });
 
@@ -515,20 +518,36 @@ ipcMain.handle('get-longest-play-session-per-game', async (event, filters) => {
 ipcMain.handle('get-playtime-over-time', async (event, filters) => {
   console.log('Received filters for playtime over time:', JSON.stringify(filters, null, 2));
   try {
+    // Create a date range for the last 30 days
+    const dateRangeQuery = `
+      SELECT generate_series(CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE, '1 day'::interval) AS play_date
+    `;
+
     let query = `
       SELECT date(start_time) as play_date, SUM(duration) as total_playtime
       FROM sessions
     `;
 
     const { query: filteredQuery, params } = addFiltersToQuery(query, filters);
-    query = filteredQuery + ' GROUP BY play_date ORDER BY play_date';
-
-    console.log('Playtime over time query:', query);
-    console.log('Query parameters:', params);
+    query = filteredQuery + ' GROUP BY play_date';
 
     const result = await client.query(query, params);
-    console.log('Playtime over time results:', result.rows);
-    return result.rows;
+    
+    // Get the date range results
+    const dateRangeResult = await client.query(dateRangeQuery);
+    const dateRange = dateRangeResult.rows.map(row => row.play_date);
+
+    // Combine results with date range, defaulting to 0 for missing days
+    const playtimeByDate = dateRange.map(date => {
+      const found = result.rows.find(row => row.play_date.toISOString().split('T')[0] === date.toISOString().split('T')[0]);
+      return {
+        play_date: date,
+        total_playtime: found ? parseFloat(found.total_playtime) : 0
+      };
+    });
+
+    console.log('Playtime over time results:', playtimeByDate);
+    return playtimeByDate;
   } catch (err) {
     console.error('Error fetching playtime over time:', err);
     throw err;
