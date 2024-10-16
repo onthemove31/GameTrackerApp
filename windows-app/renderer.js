@@ -230,55 +230,77 @@ function populateGameNameDropdown() {
   
   // Function to load session history from the database, with optional filters
   function loadSessionHistory(gameName = '', startDate = '', endDate = '') {
-    ipcRenderer.invoke('get-session-history', { gameName, startDate, endDate }).then((sessions) => {
-      const sessionTable = document.getElementById('session-history');
+    // Use the current filters if no parameters are provided
+    const filters = {
+        gameName: gameName || currentStatsFilters.gameName,
+        startDate: startDate || currentStatsFilters.startDate,
+        endDate: endDate || currentStatsFilters.endDate
+    };
+
+    ipcRenderer.invoke('get-session-history', filters).then((sessions) => {
+        const sessionTable = document.getElementById('session-history');
   
-      // Clear existing session history
-      sessionTable.innerHTML = `
-        <tr>
-          <th>Game Name</th>
-          <th>Start Time</th>
-          <th>End Time</th>
-          <th>Duration (hours)</th>
-        </tr>
-      `;
+        // Clear existing session history
+        sessionTable.innerHTML = `
+            <tr>
+                <th>Game Name</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration (hours)</th>
+            </tr>
+        `;
   
-      sessions.forEach((session) => {
-        const row = document.createElement('tr');
+        // Calculate unique games, unique days, and total hours
+        const uniqueGames = new Set();
+        const uniqueDays = new Set();
+        let totalHours = 0;
   
-        const gameNameCell = document.createElement('td');
-        gameNameCell.textContent = session.game_name;
+        sessions.forEach((session) => {
+            const gameName = session.game_name;
+            const startTime = new Date(session.start_time);
+            const endTime = new Date(session.end_time);
+            const duration = (endTime - startTime) / 1000 / 60; // Duration in minutes
   
-        const startTimeCell = document.createElement('td');
-        startTimeCell.textContent = new Date(session.start_time).toLocaleString();
+            uniqueGames.add(gameName);
+            uniqueDays.add(startTime.toDateString());
+            totalHours += duration / 60; // Convert to hours
   
-        const endTimeCell = document.createElement('td');
-        endTimeCell.textContent = session.end_time
-          ? new Date(session.end_time).toLocaleString()
-          : 'In Progress';
+            const row = document.createElement('tr');
   
-        const durationCell = document.createElement('td');
-        if (session.duration !== null && !isNaN(session.duration)) {
-          const durationHours = (session.duration / 60).toFixed(2);
-          durationCell.textContent = `${durationHours} hours`;
-        } else {
-          durationCell.textContent = session.end_time ? 'Calculating...' : 'In Progress';
-        }
+            const gameNameCell = document.createElement('td');
+            gameNameCell.textContent = gameName;
   
-        row.appendChild(gameNameCell);
-        row.appendChild(startTimeCell);
-        row.appendChild(endTimeCell);
-        row.appendChild(durationCell);
+            const startTimeCell = document.createElement('td');
+            startTimeCell.textContent = startTime.toLocaleString();
   
-        sessionTable.appendChild(row);
-      });
+            const endTimeCell = document.createElement('td');
+            endTimeCell.textContent = endTime ? endTime.toLocaleString() : 'In Progress';
+  
+            const durationCell = document.createElement('td');
+            durationCell.textContent = duration !== null && !isNaN(duration) ? `${(duration / 60).toFixed(2)} hours` : 'In Progress';
+  
+            row.appendChild(gameNameCell);
+            row.appendChild(startTimeCell);
+            row.appendChild(endTimeCell);
+            row.appendChild(durationCell);
+  
+            sessionTable.appendChild(row);
+        });
+  
+        // Display the statistics above the session history table
+        const statsContainer = document.getElementById('session-stats');
+        statsContainer.innerHTML = `
+            <p><strong>Unique Games Played:</strong> ${uniqueGames.size}</p>
+            <p><strong>Unique Days Played:</strong> ${uniqueDays.size}</p>
+            <p><strong>Total Hours Played:</strong> ${totalHours.toFixed(2)} hours</p>
+        `;
     });
   }
   
   // Event listener for the Refresh button
   document.getElementById('refresh-btn').addEventListener('click', () => {
-    // Call loadSessionHistory with no filters to refresh the full table
-    loadSessionHistory();
+    // Call loadSessionHistory with the current filters to refresh the full table
+    loadSessionHistory(currentStatsFilters.gameName, currentStatsFilters.startDate, currentStatsFilters.endDate);
   });
   
   // Event listener for the Apply Filters button
@@ -287,6 +309,11 @@ function populateGameNameDropdown() {
     const startDate = document.getElementById('filter-start-date').value;
     const endDate = document.getElementById('filter-end-date').value;
   
+    // Update current filters
+    currentStatsFilters.gameName = gameName;
+    currentStatsFilters.startDate = startDate;
+    currentStatsFilters.endDate = endDate;
+
     // Call loadSessionHistory with the filters applied
     loadSessionHistory(gameName, startDate, endDate);
   });
